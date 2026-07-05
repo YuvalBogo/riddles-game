@@ -1,0 +1,236 @@
+{
+  "easy": [
+    {
+      "type": "classic",
+      "prompt": "How many months have 28 days?",
+      "answers": ["12", "twelve", "all"],
+      "hint": "It's more than you think.",
+      "exp": 10
+    },
+    {
+      "type": "classic",
+      "prompt": "I disappear the moment you say my name. What am I?",
+      "answers": ["silence", "quiet", "hush"],
+      "hint": "You ask for it when you want peace.",
+      "exp": 10
+    },
+    {
+      "type": "classic",
+      "prompt": "A man is sitting in his car and sees three doors: a golden door, a silver door and a bronze door. Which door does he open first?",
+      "answers": ["the car door", "car door", "the door of the car"],
+      "hint": "Imagine you are the one sitting in the car.",
+      "exp": 10
+    },
+    {
+      "type": "classic",
+      "prompt": "In the Olympics, an Israeli runner overtakes the runner in second place. What place does he finish in?",
+      "answers": ["2", "two", "second"],
+      "hint": "Picture the race in your head step by step.",
+      "exp": 10
+    },
+    {
+      "type": "logic",
+      "prompt": "Mr. and Mrs. Mustard have six daughters and each daughter has one brother. How many people are in the Mustard family?",
+      "answers": ["9", "nine"],
+      "hint": "Count each person one at a time — the brother is shared.",
+      "constraints": [
+        "Every daughter has exactly one brother.",
+        "It is the SAME brother for all of them."
+      ],
+      "exp": 15
+    },
+    {
+      "type": "classic",
+      "prompt": "What gets bigger the more you take away from it?",
+      "answers": ["a hole", "hole"],
+      "hint": "It's defined by its depth.",
+      "exp": 10
+    },
+    {
+      "type": "classic",
+      "prompt": "The more you walk, the more you leave behind you. What is it?",
+      "answers": ["footsteps", "footprints", "steps"],
+      "hint": "It's something you can see on the ground.",
+      "exp": 10
+    },
+    {
+      "type": "cipher",
+      "cipher_type": "caesar",
+      "shift": 3,
+      "plain": "puzzle",
+      "prompt": "Crack the code — what word is hidden here?",
+      "hint": "Every letter was pushed 3 places forward in the alphabet; push them back.",
+      "exp": 15
+    },
+    {
+      "type": "sequence",
+      "sequence": ["2", "4", "8", "16"],
+      "answers": ["32"],
+      "prompt": "What number comes next in the sequence?",
+      "hint": "Each number is double the one before it.",
+      "exp": 15
+    },
+    {
+      "type": "ascii_art",
+      "art": " /\\_/\\\n( o.o )\n > ^ <",
+      "answers": ["cat", "a cat", "kitten"],
+      "prompt": "What animal is drawn above?",
+      "hint": "It purrs and chases mice.",
+      "exp": 15
+    }
+  ],
+  "medium": [
+    {
+      "type": "classic",
+      "prompt": "How many bananas can you eat on an empty stomach? (enter a number)",
+      "answers": ["1", "one"],
+      "hint": "After the first one, the stomach is no longer empty.",
+      "exp": 20
+    },
+    {
+      "type": "classic",
+      "prompt": "What is always found at the end of a rainbow?",
+      "answers": ["w", "the letter w"],
+      "hint": "Look carefully at the word 'rainbow' itself.",
+      "exp": 20
+    },
+    {
+      "type": "classic",
+      "prompt": "It has a neck without a head, and two arms without hands. What is it?",
+      "answers": ["shirt", "a shirt"],
+      "hint": "You might be wearing one right now.",
+      "exp": 20
+    },
+    {
+      "type": "classic",
+      "prompt": "What belongs to you, but other people use it more than you do?",
+      "answers": ["my name", "your name", "name"],
+      "hint": "Other people say it far more often than you do.",
+      "exp": 20
+    },
+    {
+      "type": "logic",
+      "prompt": "What has corners, yet we roll it like a ball?",
+      "answers": ["dice", "a die", "die", "cube", "a cube"],
+      "hint": "It has exactly 8 corners — no more, no less.",
+      "constraints": [
+        "It has 8 corners.",
+        "People roll it in games of chance."
+      ],
+      "exp": 25
+    },
+    {
+      "type": "cipher",
+      "cipher_type": "atbash",
+      "shift": 0,
+      "plain": "sphinx",
+      "prompt": "Decode this Atbash message to name the keeper of riddles.",
+      "hint": "In Atbash, A swaps with Z, B with Y, and so on — mirror the alphabet.",
+      "exp": 25
+    },
+    {
+      "type": "sequence",
+      "sequence": ["1", "1", "2", "3", "5", "8"],
+      "answers": ["13", "thirteen"],
+      "prompt": "What number comes next?",
+      "hint": "Each number is the sum of the two before it (Fibonacci).",
+      "exp": 25
+    },
+    {
+      "type": "ascii_art",
+      "art": "   /\\\n  /  \\\n /____\\\n   ||",
+      "answers": ["tree", "a tree", "pine tree"],
+      "prompt": "What is this a picture of?",
+      "hint": "It has a trunk and grows in forests.",
+      "exp": 25
+    }
+  ],
+  "hard": [
+    {
+      "type": "classic",
+      "prompt": "It has only one color but more than one size. It is never above you, and it is barely detached. What is it?",
+      "answers": ["shadow", "a shadow", "shade"],
+      "hint": "It follows you everywhere you go.",
+      "exp": 30
+    },
+    {
+      "type": "logic",
+      "prompt": "Where can you find a place where 11 + 3 = 2?",
+      "answers": ["clock", "a clock", "watch", "a watch"],
+      "hint": "It's a very common everyday object that shows time.",
+      "constraints": [
+        "The numbers wrap around after reaching a limit.",
+        "11 o'clock plus 3 hours lands on 2 o'clock."
+      ],
+      "exp": 35
+    },
+    {
+      "type": "classic",
+      "prompt": "I make two people out of one. What am I?",
+      "answers": ["a mirror", "mirror"],
+      "hint": "The two people are perfectly symmetric to each other.",
+      "exp": 30
+    },
+    {
+      "type": "classic",
+      "prompt": "Rearrange the letters O O U S W T D N E J R to spell just one word. What word is it?",
+      "answers": ["just one word", "one word", "just one word."],
+      "hint": "Do exactly what you were told — literally.",
+      "exp": 35
+    },
+    {
+      "type": "classic",
+      "prompt": "What ancient invention lets you see through walls?",
+      "answers": ["window", "a window"],
+      "hint": "There's no house without one.",
+      "exp": 30
+    },
+    {
+      "type": "logic",
+      "prompt": "Three camels walk in a straight line across the desert for days.\n  The FIRST camel says: 'I see no camels ahead of me, but two behind me.'\n  The SECOND camel says: 'I see one camel ahead and one behind.'\n  The THIRD camel says: 'I see two camels ahead and one behind.'\nGiven the information, why does the third camel say that?\n  (1) It is blind.\n  (2) It is lying.\n  (3) It is confused by the heat.",
+      "answers": ["2", "two", "lying", "it is lying", "he is lying"],
+      "hint": "There is no camel behind the third one. Read its statement again.",
+      "constraints": [
+        "The camels walk in a single straight line.",
+        "The third camel is last — nothing is behind it."
+      ],
+      "exp": 40
+    },
+    {
+      "type": "logic",
+      "prompt": "Find the pattern:\n  1234 = 1\n  4567 = 2\n  1874 = 3\n  6429 = 3\n  4868 = ?",
+      "answers": ["6", "six"],
+      "hint": "Count something inside the digits themselves — look at the holes.",
+      "constraints": [
+        "Each digit is worth the number of closed loops it contains.",
+        "0, 4, 6, 9 = 1 loop each; 8 = 2 loops; every other digit = 0."
+      ],
+      "exp": 40
+    },
+    {
+      "type": "cipher",
+      "cipher_type": "caesar",
+      "shift": 7,
+      "plain": "labyrinth",
+      "prompt": "One last cipher stands between you and the exit. Decode it.",
+      "hint": "The alphabet was shifted forward by 7. Shift each letter back 7.",
+      "exp": 40
+    },
+    {
+      "type": "sequence",
+      "sequence": ["O", "T", "T", "F", "F", "S", "S"],
+      "answers": ["e", "eight"],
+      "prompt": "What letter comes next in this sequence?",
+      "hint": "Say the numbers one, two, three... out loud and take their first letters.",
+      "exp": 40
+    },
+    {
+      "type": "ascii_art",
+      "art": "  ______\n /      \\\n/________\\\n    ||\n    ||",
+      "answers": ["umbrella", "an umbrella", "parasol"],
+      "prompt": "What object is shown above?",
+      "hint": "You open it when it rains.",
+      "exp": 40
+    }
+  ]
+}

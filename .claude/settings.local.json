@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/yuval/Programming/**)",
+      "Read(//home/yuval/Programming/RiddlesGame/**)",
+      "Bash(python -c \"import riddles.game, riddles.ui, riddles.riddle, riddles.player, riddles.data, riddles.__main__; print\\('imports OK'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python -m riddles)",
+      "Bash(NO_COLOR=1 python -c ' *)",
+      "Bash(python -m py_compile riddles/*.py)",
+      "Bash(python -c \"import json; json.load\\(open\\('riddles/content/riddles.json'\\)\\); print\\('JSON OK'\\)\")",
+      "Bash(python play.py)",
+      "Bash(echo \"play.py exit: $?\")",
+      "Bash(python /tmp/claude-1000/-home-yuval-Programming-Riddles2-0/9bc0ad17-85a1-47fa-8b57-be921d6a1c34/scratchpad/drive.py)",
+      "Bash(python /tmp/claude-1000/-home-yuval-Programming-Riddles2-0/9bc0ad17-85a1-47fa-8b57-be921d6a1c34/scratchpad/drive2.py)",
+      "Bash(echo \"invalid-menu-then-quit exit: $?\")",
+      "Bash(python -c \"import riddles.__main__, riddles.game, riddles.ui, riddles.riddle, riddles.player, riddles.data; print\\('all imports OK'\\)\")",
+      "Bash(python -c \"import json; json.load\\(open\\('riddles/content/riddles.json'\\)\\); print\\('riddles.json valid'\\)\")"
+    ]
+  }
+}
