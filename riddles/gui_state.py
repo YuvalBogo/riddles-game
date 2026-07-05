@@ -85,12 +85,29 @@ class Card:
 # --- Run state machine -----------------------------------------------------
 
 class RunState:
-    """Drives a real run (Easy → Medium → Hard) as a sequence of cards."""
+    """Drives a run as a sequence of cards.
 
-    def __init__(self, riddles: dict, player: Player | None = None):
+    ``mode="real"``     — continuous Easy → Medium → Hard, XP + streak,
+                          skips cost SKIP_COST, flawless-level life bonus.
+    ``mode="practice"`` — a single chosen level, no XP, free skips, and a
+                          finish once that level is cleared.
+    """
+
+    def __init__(
+        self,
+        riddles: dict,
+        player: Player | None = None,
+        mode: str = "real",
+        practice_level: str | None = None,
+    ):
         self.riddles = riddles
         self.player = player or Player(name="Player")
-        self.level_index = 0
+        self.mode = mode
+        self.level_index = (
+            data.LEVELS.index(practice_level)
+            if mode == "practice" and practice_level
+            else 0
+        )
         self.order: list = []
         self.pos = 0
         self.hints_left = 0
@@ -149,7 +166,7 @@ class RunState:
 
         riddle = self.current_riddle()
         if riddle.check(guess):
-            base, bonus = self.player.solve(award_xp=True)
+            base, bonus = self.player.solve(award_xp=(self.mode == "real"))
             card.answer = guess
             card.result = "correct"
             return {"result": "correct", "base": base, "bonus": bonus,
@@ -166,16 +183,19 @@ class RunState:
         return {"result": "wrong", "dead": False, "lost_index": self.player.lives}
 
     def skip(self) -> dict:
-        """Skip the current riddle (real-run rules: costs SKIP_COST XP)."""
+        """Skip the current riddle. Real: costs SKIP_COST XP. Practice: free."""
         if self.finished:
             return {"ok": False, "reason": "finished"}
         card = self.live_card()
         if card.result != "pending":
             return {"ok": False, "reason": "not_current"}
-        if not self.player.can_skip():
-            return {"ok": False, "reason": "poor",
-                    "need": SKIP_COST, "have": self.player.exp}
-        self.player.skip(cost=SKIP_COST)
+        if self.mode == "real":
+            if not self.player.can_skip():
+                return {"ok": False, "reason": "poor",
+                        "need": SKIP_COST, "have": self.player.exp}
+            self.player.skip(cost=SKIP_COST)
+        else:
+            self.player.skip()  # free in Practice Mode
         card.result = "skipped"
         return {"ok": True, "square": self.pos}
 
@@ -201,6 +221,12 @@ class RunState:
         if self.pos < len(self.order):
             self._present()
             return {"kind": "card"}
+
+        # Practice Mode drills a single level — clearing it ends the drill.
+        if self.mode == "practice":
+            self.finished = True
+            self.outcome = "win"
+            return {"kind": "win", "life_gained": False, "gain_index": None}
 
         # Level cleared — flawless bonus, then next level or win.
         life_gained = False

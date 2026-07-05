@@ -15,6 +15,7 @@ from __future__ import annotations
 import random
 import tkinter as tk
 from tkinter import font as tkfont
+from tkinter import simpledialog
 
 from . import data
 from .gui_state import CONTENT_W, RunState
@@ -76,12 +77,14 @@ CARD_ROWS = 26   # deck canvas height in text rows (fits the tallest card)
 
 
 class RiddlesGUI:
-    def __init__(self, root: tk.Tk, state: RunState):
+    def __init__(self, root: tk.Tk, state: RunState, on_menu=None):
         self.root = root
         self.state = state
+        self.on_menu = on_menu     # callback to return to the main menu
         self.view_index = state.live_index()
         self._card_items: list[int] = []
         self._animating = False
+        self._alive = True         # guards pending .after callbacks on teardown
         self._heart_flash = None   # (index, glyph, color)
         self._square_flash = None  # (index, glyph, color)
 
@@ -144,6 +147,8 @@ class RiddlesGUI:
                 highlightthickness=0, padx=8, cursor="hand2",
             )
 
+        self.menu_btn = mkbtn("≡ Menu", self._to_menu, PALETTE["magenta"])
+        self.menu_btn.pack(side="left", padx=(0, 10))
         self.back_btn = mkbtn("◀", self.on_back, PALETTE["cyan"])
         self.back_btn.pack(side="left")
 
@@ -248,8 +253,10 @@ class RiddlesGUI:
                 segs.append(("♥", PALETTE["red"]))
             else:
                 segs.append(("♡", PALETTE["grey"]))
-        segs.append(("  ─  XP: ", PALETTE["grey"]))
-        segs.append((str(p.exp), PALETTE["fg"]))
+        # XP only matters in a real run — Practice Mode awards none.
+        if self.state.mode == "real":
+            segs.append(("  ─  XP: ", PALETTE["grey"]))
+            segs.append((str(p.exp), PALETTE["fg"]))
         segs.append((" ─┐", accent))
 
         x = self.charw
@@ -351,7 +358,8 @@ class RiddlesGUI:
         self._animating = True
         self.view_index = self.state.live_index()
         self._redraw_current()
-        self._message(f"Skipped.  (−{SKIP_COST} XP)", PALETTE["grey"])
+        cost_note = f"  (−{SKIP_COST} XP)" if self.state.mode == "real" else ""
+        self._message(f"Skipped.{cost_note}", PALETTE["grey"])
         sq = res["square"]
         self._blink(self._set_square,
                     [(sq, "■", PALETTE["yellow"]), (sq, "■", PALETTE["green"])],
@@ -411,6 +419,8 @@ class RiddlesGUI:
         self._square_flash = value
 
     def _blink(self, setter, frames, done=None, i=0):
+        if not self._alive:
+            return
         if i >= len(frames):
             setter(None)
             self.render_header()
@@ -430,6 +440,8 @@ class RiddlesGUI:
         step = -direction * self.deck_w / SLIDE_FRAMES
 
         def run(i):
+            if not self._alive:
+                return
             if i >= SLIDE_FRAMES:
                 for item in old_items:
                     self.deck.delete(item)
@@ -448,6 +460,14 @@ class RiddlesGUI:
         self._slide(self.state.live_card(), direction, done=done)
 
     # -- chrome / end -------------------------------------------------------
+
+    def _to_menu(self) -> None:
+        if self.on_menu:
+            self.on_menu()
+
+    def teardown(self) -> None:
+        """Stop pending animations so leftover .after callbacks are no-ops."""
+        self._alive = False
 
     def _apply_chrome(self, level: str) -> None:
         self.chrome.configure(bg=LEVEL_CHROME.get(level, PALETTE["cyan"]))
@@ -470,15 +490,138 @@ class RiddlesGUI:
             rows.append(row(f"{key:16}: {value}", PALETTE["cyan"]))
         rows.append(("╚" + "═" * (w + 2) + "╝", color))
         self._card_items = self._draw_card(rows, self._card_x(), self.lineh)
-        self._message("Close the window to exit." , PALETTE["fg"])
+
+        # Record a qualifying real run on the shared leaderboard.
+        if self.state.mode == "real" and data.qualifies(self.state.player.exp):
+            data.add_score(self.state.player.name, self.state.player.exp)
+            self._message("New Top 5! Saved. Press ≡ Menu to return.",
+                          PALETTE["green"])
+        else:
+            self._message("Press ≡ Menu to return.", PALETTE["fg"])
+
+
+class App:
+    """Top-level controller: the main menu and the screens it leads to.
+
+    Mirrors the terminal menu — Start Run / Practice Mode / View Top 5 /
+    Quit — swapping the window's contents between a menu, a running game,
+    and the leaderboard on one root window.
+    """
+
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.game: RiddlesGUI | None = None
+        family = _resolve_font(root)
+        self.font = tkfont.Font(family=family, size=CONFIG["font_size"])
+        self.title_font = tkfont.Font(
+            family=family, size=CONFIG["font_size"] + 6, weight="bold"
+        )
+        self.show_menu()
+
+    # -- screen scaffolding -------------------------------------------------
+
+    def _clear(self) -> None:
+        if self.game is not None:
+            self.game.teardown()
+            self.game = None
+        self.root.unbind("<Left>")
+        self.root.unbind("<Right>")
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+    def _screen(self, accent: str) -> tk.Frame:
+        """A bordered black screen (accent chrome), returns the content frame."""
+        chrome = tk.Frame(self.root, bg=accent)
+        chrome.pack(fill="both", expand=True)
+        content = tk.Frame(chrome, bg=CONFIG["background"])
+        content.pack(fill="both", expand=True,
+                     padx=CONFIG["border_px"], pady=CONFIG["border_px"])
+        return content
+
+    def _title(self, parent, text, color) -> None:
+        tk.Label(parent, text=text, font=self.title_font,
+                 bg=CONFIG["background"], fg=color).pack(pady=(28, 6))
+
+    def _menu_button(self, parent, label, desc, color, cmd) -> None:
+        row = tk.Frame(parent, bg=CONFIG["background"])
+        row.pack(fill="x", padx=60, pady=6)
+        tk.Button(
+            row, text=label, command=cmd, font=self.font, width=16,
+            bg="#111111", fg=color, activebackground="#222222",
+            activeforeground=color, relief="flat", bd=0, cursor="hand2", pady=8,
+        ).pack(side="left")
+        if desc:
+            tk.Label(row, text=desc, font=self.font,
+                     bg=CONFIG["background"], fg=PALETTE["grey"]).pack(
+                side="left", padx=14)
+
+    # -- screens ------------------------------------------------------------
+
+    def show_menu(self) -> None:
+        self._clear()
+        c = self._screen(PALETTE["magenta"])
+        self._title(c, "🧩  R I D D L E S   2 . 0  🧩", PALETTE["cyan"])
+        tk.Label(c, text="match wits with the sphinx", font=self.font,
+                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 22))
+        self._menu_button(c, "Start Run", "Easy → Medium → Hard, one life pool",
+                          PALETTE["green"], self.start_run)
+        self._menu_button(c, "Practice Mode", "drill any level, no stakes",
+                          PALETTE["cyan"], self.show_practice)
+        self._menu_button(c, "View Top 5", "the leaderboard",
+                          PALETTE["yellow"], self.show_leaderboard)
+        self._menu_button(c, "Quit", "", PALETTE["red"], self.root.destroy)
+
+    def show_practice(self) -> None:
+        self._clear()
+        c = self._screen(LEVEL_CHROME["easy"])
+        self._title(c, "Practice — pick a level", PALETTE["cyan"])
+        riddles = data.load_riddles()
+        for level in data.LEVELS:
+            self._menu_button(
+                c, level.capitalize(), f"{len(riddles[level])} riddles",
+                LEVEL_CHROME[level], lambda lv=level: self.start_practice(lv),
+            )
+        self._menu_button(c, "◀ Back", "", PALETTE["grey"], self.show_menu)
+
+    def show_leaderboard(self) -> None:
+        self._clear()
+        c = self._screen(PALETTE["yellow"])
+        self._title(c, "🏆  TOP 5 RIDDLERS", PALETTE["yellow"])
+        entries = data.load_leaderboard()
+        if not entries:
+            tk.Label(c, text="No scores yet — be the first!", font=self.font,
+                     bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=12)
+        else:
+            for rank, (name, score) in enumerate(entries, 1):
+                tk.Label(
+                    c, text=f"{rank}.  {name[:16].ljust(16)}  {str(score).rjust(5)} XP",
+                    font=self.font, bg=CONFIG["background"], fg=PALETTE["cyan"],
+                ).pack(pady=2)
+        tk.Label(c, text="", bg=CONFIG["background"]).pack(pady=6)
+        self._menu_button(c, "◀ Back", "", PALETTE["grey"], self.show_menu)
+
+    # -- launching a game ---------------------------------------------------
+
+    def start_run(self) -> None:
+        name = simpledialog.askstring(
+            "Riddles 2.0", "Enter your name, riddler:", parent=self.root
+        ) or "Player"
+        self._clear()
+        state = RunState(data.load_riddles(), Player(name=name), mode="real")
+        self.game = RiddlesGUI(self.root, state, on_menu=self.show_menu)
+
+    def start_practice(self, level: str) -> None:
+        self._clear()
+        state = RunState(data.load_riddles(), Player(name="Player"),
+                         mode="practice", practice_level=level)
+        self.game = RiddlesGUI(self.root, state, on_menu=self.show_menu)
 
 
 def main() -> None:
     root = tk.Tk()
     root.title("Riddles 2.0")
     root.configure(bg=CONFIG["background"])
-    state = RunState(data.load_riddles(), Player(name="Player"))
-    RiddlesGUI(root, state)
+    App(root)
     root.mainloop()
 
 
