@@ -24,10 +24,26 @@ from .player import Player, SKIP_COST
 
 CONFIG = {
     "background": "#000000",       # content background — black, per spec
-    "font_family": "DejaVu Sans Mono",
+    "font_family": "Noto Sans Mono",  # preferred; see _resolve_font for fallback
     "font_size": 15,
     "border_px": 10,               # chrome margin that reveals the level tint
 }
+
+# Preference order for a monospace with good box-drawing / ♥ / ■ coverage.
+# The first family actually installed wins, so the look stays consistent
+# instead of silently falling back to some Tk default.
+_FONT_FALLBACKS = [
+    "Noto Sans Mono", "DejaVu Sans Mono", "Liberation Mono",
+    "Source Code Pro", "Courier New", "Courier",
+]
+
+
+def _resolve_font(root) -> str:
+    available = set(tkfont.families(root))
+    for family in [CONFIG["font_family"], *_FONT_FALLBACKS]:
+        if family in available:
+            return family
+    return "TkFixedFont"
 
 # Vivid, saturated palette echoing the terminal ANSI colors.
 PALETTE = {
@@ -70,7 +86,7 @@ class RiddlesGUI:
         self._square_flash = None  # (index, glyph, color)
 
         self.font = tkfont.Font(
-            family=CONFIG["font_family"], size=CONFIG["font_size"]
+            family=_resolve_font(root), size=CONFIG["font_size"]
         )
         self.charw = self.font.measure("0")
         self.lineh = self.font.metrics("linespace")
