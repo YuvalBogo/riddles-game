@@ -15,7 +15,20 @@ def show_menu() -> str:
     print(f"  {ui.color('3', C.BOLD)}  View Top 5     the leaderboard")
     print(f"  {ui.color('4', C.BOLD)}  Quit")
     print()
-    return ui.ask_choice("  Choose (1-4): ", ["1", "2", "3", "4"])
+
+    # Easter egg: three invalid picks in a row and the game walks off in a huff.
+    strikes = 0
+    while True:
+        choice = ui.ask("  Choose (1-4): ").lower()
+        if choice in {"1", "2", "3", "4"}:
+            return choice
+        if choice == "quit":
+            return "quit"
+        strikes += 1
+        if strikes >= 3:
+            print(ui.color("\n  That's not nice!", C.RED, C.BOLD))
+            raise SystemExit
+        print(ui.color("  Please pick 1, 2, 3, or 4.", C.YELLOW))
 
 
 def real_run() -> None:
@@ -51,7 +64,11 @@ def main() -> None:
     ui.intro_banner()
     print()
     print("  Solve riddles across three levels. A wrong answer costs a life;")
-    print("  clear a level flawlessly to earn one back. Good luck!")
+    print("  clear a level flawlessly to earn one back.Good luck!")
+    print("  Each correct answer earns experience points (XP). Use them to get hints when you're stuck.")
+    print("  Good luck!")
+    print("  The Top 5 leaderboard is based on total XP earned.")
+    
     while True:
         choice = show_menu()
         if choice in ("4", "quit"):
