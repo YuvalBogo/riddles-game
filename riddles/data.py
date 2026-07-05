@@ -85,13 +85,20 @@ PRAISE = [
     "Bravo! Truly impressive.",
     "Sharp as ever!",
     "That's the spirit — spot on!",
+    "Look at THAT!",
+    "You're on fire!",
+    "GOD DAYUMN, you are good at this!",
+    "mmm, yes, very good.",
+    "MACHINEEE!"
 ]
 
 TAUNT = [
     "Nope.",
-    "Wrong answer.",
     "Not quite — think it through.",
     "Don't be impulsive, take a breath.",
-    "Try to picture the solution.",
+    "Try to picture the solution. BE the solution.",
     "Close, but no.",
+    "How do you sleep at night, knowing that was wrong?",
+    "BBZZZT! Wrong answer.",
+    "HAHA! loser."
 ]

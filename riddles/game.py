@@ -97,9 +97,10 @@ class Game:
 
         hints_left = max_hints
         mistakes_before = self.player.mistakes
+        total = len(riddles)
 
         for index, riddle in enumerate(riddles, 1):
-            hints_left = self._play_riddle(riddle, index, hints_left)
+            hints_left = self._play_riddle(riddle, index, hints_left, level, total)
             if not self.player.alive:
                 raise QuitGame
 
@@ -117,7 +118,25 @@ class Game:
 
     # -- one riddle ---------------------------------------------------------
 
-    def _play_riddle(self, riddle: Riddle, index: int, hints_left: int) -> int:
+    def _status_bar(self, level: str, done: int, total: int) -> str:
+        # XP is only meaningful in a real run; Practice Mode drops that segment.
+        xp = self.player.exp if self.mode == "real" else None
+        return ui.status_bar(
+            level.capitalize(),
+            done,
+            total,
+            self.player.lives,
+            self.player.max_lives,
+            xp,
+        )
+
+    def _play_riddle(
+        self, riddle: Riddle, index: int, hints_left: int, level: str, total: int
+    ) -> int:
+        # Persistent HUD: first thing on screen for this riddle's refresh,
+        # above the prompt, hints, and feedback that follow.
+        print()
+        print(self._status_bar(level, index - 1, total))
         riddle.display(index)
 
         while True:

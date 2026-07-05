@@ -3,7 +3,7 @@
     {
       "type": "classic",
       "prompt": "How many months have 28 days?",
-      "answers": ["12", "twelve", "all"],
+      "answers": ["12", "twelve", "all", "every month", "all months", "every month has 28 days", "all months have 28 days"],
       "hint": "It's more than you think.",
       "exp": 10
     },
@@ -17,7 +17,7 @@
     {
       "type": "classic",
       "prompt": "A man is sitting in his car and sees three doors: a golden door, a silver door and a bronze door. Which door does he open first?",
-      "answers": ["the car door", "car door", "the door of the car"],
+      "answers": ["the car door", "car door", "the door of the car", "door of the car", "the door", "door", "car"],
       "hint": "Imagine you are the one sitting in the car.",
       "exp": 10
     },
@@ -31,7 +31,7 @@
     {
       "type": "logic",
       "prompt": "Mr. and Mrs. Mustard have six daughters and each daughter has one brother. How many people are in the Mustard family?",
-      "answers": ["9", "nine"],
+      "answers": ["9", "nine", "9 people", "nine people"],
       "hint": "Count each person one at a time — the brother is shared.",
       "constraints": [
         "Every daughter has exactly one brother.",
@@ -42,14 +42,14 @@
     {
       "type": "classic",
       "prompt": "What gets bigger the more you take away from it?",
-      "answers": ["a hole", "hole"],
+      "answers": ["a hole", "hole", "the hole", "a pit", "pit", "the pit"],
       "hint": "It's defined by its depth.",
       "exp": 10
     },
     {
       "type": "classic",
       "prompt": "The more you walk, the more you leave behind you. What is it?",
-      "answers": ["footsteps", "footprints", "steps"],
+      "answers": ["footsteps", "footprints", "steps", "prints", "tracks", "footmarks", "marks", "trails", "traces", "imprints"],
       "hint": "It's something you can see on the ground.",
       "exp": 10
     },

@@ -157,6 +157,52 @@ def animate_life_loss(current: int, maximum: int, delay: float = 0.14) -> None:
     sys.stdout.flush()
 
 
+# --- Status HUD ------------------------------------------------------------
+
+def status_bar(
+    level_name: str,
+    done: int,
+    total: int,
+    lives: int,
+    max_lives: int,
+    xp: int | None = None,
+) -> str:
+    """One-line status HUD: level · progress · lives · XP.
+
+    Rendered at the top of every refresh during a run. ``done``/``total``
+    drive a squares-only progress bar (no fraction text). ``xp=None`` drops
+    the XP segment (Practice Mode). Degrades to a plain, box-drawing-free
+    line when colors are disabled or output isn't a terminal.
+    """
+    done = max(0, min(done, total))
+    filled = "■" * done
+    empty = "□" * (total - done)
+
+    if _COLORS_ENABLED:
+        bar = color(filled, C.GREEN) + color(empty, C.GREY)
+    else:
+        bar = filled + empty
+
+    segments = [
+        f"Level: {level_name}",
+        f"[{bar}]",
+        hearts(lives, max_lives),
+    ]
+    if xp is not None:
+        segments.append(f"XP: {xp}")
+
+    if not _COLORS_ENABLED:
+        # Plain-text fallback: no box-drawing, simple pipe separators.
+        return "  " + " | ".join(segments)
+
+    sep = color(" ─ ", C.GREY)
+    return (
+        color("  ┌─ ", C.CYAN)
+        + sep.join(segments)
+        + color(" ─┐", C.CYAN)
+    )
+
+
 # --- Input -----------------------------------------------------------------
 
 def ask(prompt: str) -> str:
