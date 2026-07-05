@@ -137,6 +137,8 @@ class Game:
         # above the prompt, hints, and feedback that follow.
         print()
         print(self._status_bar(level, index - 1, total))
+        # Sphinx motif above the riddle's header, tinted by the level.
+        ui.sphinx(level)
         riddle.display(index)
 
         while True:

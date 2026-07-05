@@ -308,6 +308,40 @@ def lose_banner() -> None:
 LEVEL_ACCENT = {"easy": C.CYAN, "medium": C.YELLOW, "hard": C.RED}
 
 
+# A small shared sphinx motif, recolored per level. Same silhouette every
+# level so it always reads as "the sphinx"; only the tint shifts.
+_SPHINX_ART = [
+    '   .--"""--.  ',
+    "  / (o) (o) \\ ",
+    "  |    <    | ",
+    "  |   \\_/   | ",
+    "  _\\_______/_ ",
+    " /___________\\",
+]
+
+
+def sphinx(level: str | None = None) -> None:
+    """Render the sphinx motif above a riddle, subtly tinted by level.
+
+    Reuses the existing palette: the head takes the level's ambient accent
+    (cool → hot as levels rise), the eyes glow a brighter shade of it, and
+    the plinth stays stone-grey. Falls back to plain monochrome ASCII when
+    colors are disabled or output isn't a terminal.
+    """
+    accent = LEVEL_ACCENT.get(level or "", C.MAGENTA)
+    last = len(_SPHINX_ART) - 1
+    print()
+    for i, line in enumerate(_SPHINX_ART):
+        if not _COLORS_ENABLED:
+            print("  " + line)
+        elif i == last:
+            print("  " + color(line, C.GREY))            # stone plinth
+        elif i == 1:
+            print("  " + color(line, C.BOLD, accent))     # glowing eyes
+        else:
+            print("  " + color(line, accent))
+
+
 def level_banner(title: str, subtitle: str, level: str | None = None) -> None:
     """Themed banner shown when entering a level."""
     accent = LEVEL_ACCENT.get(level or "", C.MAGENTA)
