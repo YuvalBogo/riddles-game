@@ -88,38 +88,91 @@ SLIDE_MS = 26
 BLINK_MS = 110
 CARD_ROWS = 26   # deck canvas height in text rows (fits the tallest card)
 
-# Retro "framed photo" sphinx for the welcome screen. gui.py keeps its own
-# copy of the silhouette on purpose — it never imports the terminal front-end
-# — and swaps the eye glyph to make it blink on entry.
-_SPHINX_ART = [
-    '+-----------------------------------+',
-    '|           _.--"""""""--._         |',
-    '|          /   o      o   \\         |',
-    '|          \\_     ^^     _/         |',
-    '|            ___________            |',
-    '|           /  _______  \\           |',
-    '|          /  /       \\  \\          |',
-    '|         /  /         \\  \\         |',
-    '|   _____/  /           \\  \\_____   |',
-    '|  |       /             \\       |  |',
-    '|  |______/               \\______|  |',
-    '|  ||====||               ||====||  |',
-    '|  ||____||_______________||____||  |',
-    '+-----------------------------------+',
-]
-_SPHINX_EYE_ROW = 2  # the only line that changes when the sphinx blinks
+# Pixel-art imagery (sphinx bust, canopic jars, temple facade). The source
+# files live in ``sphinx/images`` and are pre-sized to their display
+# dimensions with a solid-black background, so they load natively via Tk's
+# PhotoImage (no scaling, no extra dependency) and sit seamlessly on the
+# black UI. ``IMAGE_FOR`` names each file; ``_load_image`` decodes once and
+# caches — the returned PhotoImage must be kept referenced by its widget or
+# Tk garbage-collects the pixels.
+_IMAGE_DIR = Path(__file__).resolve().parent / "images"
+IMAGE_FOR = {
+    "menu": "sphinx_start_menu.png",     # welcome screen — the sphinx bust
+    "about": "sphinx_with_friends.png",  # About screen — the four canopic jars
+    "easy": "outer_walls_wide.png",      # Easy level banner — the outer walls
+}
+_IMAGE_CACHE: dict[str, "tk.PhotoImage"] = {}
 
 
-def _sphinx_face(eye: str) -> str:
-    """The sphinx art with its eyes drawn as ``eye`` ('o' open, '-' shut)."""
-    lines = list(_SPHINX_ART)
-    lines[_SPHINX_EYE_ROW] = lines[_SPHINX_EYE_ROW].replace("o", eye)
-    return "\n".join(lines)
+def _load_image(key: str):
+    """Return the cached PhotoImage for a screen ``key`` (see ``IMAGE_FOR``),
+    or ``None`` if the file is missing or Tk cannot decode it — every caller
+    degrades gracefully to a text-only screen."""
+    if key in _IMAGE_CACHE:
+        return _IMAGE_CACHE[key]
+    try:
+        img = tk.PhotoImage(file=str(_IMAGE_DIR / IMAGE_FOR[key]))
+    except (tk.TclError, KeyError):
+        img = None
+    _IMAGE_CACHE[key] = img
+    return img
 
 
-_SPHINX_OPEN = _sphinx_face("o")
-_SPHINX_SHUT = _sphinx_face("-")
-SPHINX_COLOR = "#c9a24a"   # muted sandstone gold, a touch "aged photo"
+# Room (px) reserved for the window manager's chrome (title bar + panels) so a
+# screen never opens taller than the visible desktop. The Easy banner shrinks
+# to whatever height is left after the rest of the game fits, and hides
+# entirely below MIN_BANNER_H rather than showing a sliver.
+SCREEN_MARGIN = 100
+MIN_BANNER_H = 70
+
+# Display height (px) for the Easy banner, chosen at startup from the screen
+# size (see App._compute_layout). 0 hides it. Banners are cached per height.
+_BANNER_H = 0
+_BANNER_CACHE: dict[int, "tk.PhotoImage"] = {}
+
+
+def _scaled_photo(path, target_h: int):
+    """A PhotoImage of ``path`` scaled to ``target_h`` px tall (aspect kept).
+
+    Prefers Pillow to resample cleanly — it writes a temp PNG that Tk then
+    loads, so ``ImageTk`` isn't required — and falls back to Tk's integer
+    ``subsample`` (coarser), then the unscaled image. ``None`` if unloadable.
+    """
+    try:
+        import os
+        import tempfile
+        from PIL import Image
+        im = Image.open(path)
+        w, h = im.size
+        if 0 < target_h < h:
+            im = im.resize((max(1, round(w * target_h / h)), target_h), Image.LANCZOS)
+        fd, tmp = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+        try:
+            im.save(tmp, optimize=True)
+            return tk.PhotoImage(file=tmp)
+        finally:
+            os.unlink(tmp)
+    except Exception:
+        pass
+    try:
+        img = tk.PhotoImage(file=str(path))
+        if target_h and target_h < img.height():
+            img = img.subsample(max(1, round(img.height() / target_h)))
+        return img
+    except tk.TclError:
+        return None
+
+
+def _easy_banner():
+    """The Easy-level banner scaled to the current ``_BANNER_H``, or ``None``
+    when there's no room for it on this screen."""
+    if _BANNER_H <= 0:
+        return None
+    if _BANNER_H not in _BANNER_CACHE:
+        _BANNER_CACHE[_BANNER_H] = _scaled_photo(
+            _IMAGE_DIR / IMAGE_FOR["easy"], _BANNER_H)
+    return _BANNER_CACHE[_BANNER_H]
 
 # Inline Markdown spans handled by the About README renderer: **bold**,
 # `code`, and [label](url) links.
@@ -170,6 +223,7 @@ class RiddlesGUI:
         self._build_widgets()
         self._apply_chrome(self.state.level)
         self.render_story()
+        self.render_banner()
         self._card_items = self._draw_card(
             self._card_render(self.state.live_card()), self._card_x(), self.lineh
         )
@@ -206,6 +260,11 @@ class RiddlesGUI:
         self.story_title.pack()
         self.story_sub = tk.Label(story, font=self.font, bg=bg, fg=PALETTE["grey"])
         self.story_sub.pack()
+
+        # Per-level banner image, sitting between the story and the deck. Only
+        # the Easy level ("the outer walls") has art; render_banner packs it in
+        # or hides it as the level changes. Created unpacked.
+        self.banner = tk.Label(content, bg=bg)
 
         self.deck = tk.Canvas(
             content, bg=bg, width=self.deck_w, height=self.deck_h,
@@ -320,6 +379,19 @@ class RiddlesGUI:
         self.story_title.configure(
             text=title, fg=LEVEL_CHROME.get(self.state.level, PALETTE["cyan"]))
         self.story_sub.configure(text=sub)
+
+    def render_banner(self) -> None:
+        """Show the current level's banner above the deck, or hide it on levels
+        with no art. Only Easy ('the outer walls') has an image today, sized to
+        fit the screen; Medium and Hard fall through to a hidden banner."""
+        img = _easy_banner() if self.state.level == "easy" else None
+        if img is not None:
+            self.banner.configure(image=img)
+            self.banner.image = img   # keep a reference against Tk GC
+            self.banner.pack(before=self.deck, pady=(0, 8))
+        else:
+            self.banner.pack_forget()
+            self.banner.image = None
 
     def render_header(self) -> None:
         """Draw the HUD as a full-width bar with its contents centered.
@@ -599,6 +671,7 @@ class RiddlesGUI:
         elif adv["kind"] == "level_up":
             self._apply_chrome(adv["level"])
             self.render_story()
+            self.render_banner()   # Easy banner disappears past the outer walls
             if adv["life_gained"]:
                 gi = adv["gain_index"]
                 self._blink(self._set_heart,
@@ -741,9 +814,9 @@ class App:
             "h3": tkfont.Font(family=family, size=CONFIG["font_size"] + 1, weight="bold"),
             "bold": tkfont.Font(family=family, size=CONFIG["font_size"], weight="bold"),
         }
-        # The riddle interface's natural size, measured once. Every screen uses
-        # this one default size, so the window never jumps between screens.
-        self._game_size = self._measure_game_size()
+        # The window's default size, fitted to the screen once. Every screen
+        # reuses it, so the window never jumps between screens.
+        self._compute_layout()
         self._center_window(*self._game_size)
         self.show_menu()
 
@@ -756,6 +829,33 @@ class App:
         y = max(0, (self.root.winfo_screenheight() - h) // 2)
         self.root.geometry(f"{w}x{h}+{x}+{y}")
         self.root.minsize(w, h)
+
+    def _compute_layout(self) -> None:
+        """Pick the Easy-banner height and the window size so nothing opens
+        taller than the visible desktop.
+
+        The rest of the game (HUD, story, deck, controls) has a fixed natural
+        height; the banner takes only the vertical room left over on this
+        screen — its full height on a tall display, a shrunk one on a laptop,
+        or nothing at all when there's no room. Sets the module-level
+        ``_BANNER_H`` (read when a banner is rendered) and ``self._game_size``.
+        """
+        global _BANNER_H
+        usable_h = self.root.winfo_screenheight() - SCREEN_MARGIN
+        usable_w = self.root.winfo_screenwidth() - SCREEN_MARGIN
+
+        _BANNER_H = 0                                  # measure the game bannerless
+        base_w, base_h = self._measure_game_size()
+        nat = _load_image("easy")                      # banner at its natural size
+        nat_h = nat.height() if nat is not None else 0
+
+        gap = 8                                         # matches render_banner's pady
+        budget = usable_h - base_h - gap
+        banner_h = min(nat_h, budget)
+        _BANNER_H = banner_h if banner_h >= MIN_BANNER_H else 0
+
+        win_h = base_h + (_BANNER_H + gap if _BANNER_H else 0)
+        self._game_size = (min(base_w, usable_w), min(win_h, usable_h))
 
     def _measure_game_size(self) -> tuple[int, int]:
         """Lay a game out on a hidden window to read the pixel size the riddle
@@ -803,23 +903,30 @@ class App:
                  bg=CONFIG["background"], fg=color).pack(pady=(28, 6))
 
     def _menu_button(self, parent, label, desc, color, cmd, key=None) -> None:
-        row = tk.Frame(parent, bg=CONFIG["background"])
-        row.pack(fill="x", padx=60, pady=6)
-        if key is not None:
-            # A dim shortcut digit to the left of the button — quiet enough not
-            # to clutter the screen, but a hint that the number key works too.
-            tk.Label(row, text=str(key), font=self.font, width=2,
-                     bg=CONFIG["background"], fg=PALETTE["grey"]).pack(side="left")
-            self._bind_key(key, cmd)
+        # Each item is a centred vertical stack: the button on top, its small
+        # grey description directly beneath. The shortcut digit rides just left
+        # of the button, balanced by an equal-width spacer on the right so the
+        # button itself stays dead-centre (the number key still works too).
+        item = tk.Frame(parent, bg=CONFIG["background"])
+        item.pack(pady=6)
+
+        top = tk.Frame(item, bg=CONFIG["background"])
+        top.pack()
+        tk.Label(top, text=(str(key) if key is not None else ""), width=2,
+                 font=self.small_font, bg=CONFIG["background"],
+                 fg=PALETTE["grey"]).pack(side="left")
         tk.Button(
-            row, text=label, command=cmd, font=self.font, width=16,
+            top, text=label, command=cmd, font=self.font, width=16,
             bg="#111111", fg=color, activebackground="#222222",
             activeforeground=color, relief="flat", bd=0, cursor="hand2", pady=8,
         ).pack(side="left")
+        tk.Label(top, text="", width=2, bg=CONFIG["background"]).pack(side="left")
+        if key is not None:
+            self._bind_key(key, cmd)
+
         if desc:
-            tk.Label(row, text=desc, font=self.font,
-                     bg=CONFIG["background"], fg=PALETTE["grey"]).pack(
-                side="left", padx=14)
+            tk.Label(item, text=desc.strip(), font=self.small_font,
+                     bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(3, 0))
 
     def _bind_key(self, digit: int, cmd) -> None:
         """Bind a number key (top-row and keypad) to a menu action, tracking it
@@ -844,14 +951,12 @@ class App:
         tk.Label(c, text="Do you have what it take to enter the sphinx?", font=self.font,
                  bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 8))
 
-        # Retro sphinx "photo" — blinks twice, then settles, on every entry.
-        sphinx = tk.Label(c, text=_SPHINX_OPEN, font=self.font, justify="center",
-                          bg=CONFIG["background"], fg=SPHINX_COLOR)
+        # The sphinx bust — pixel-art centrepiece of the welcome screen. Falls
+        # back to a plain caption if the image can't be loaded.
+        img = _load_image("menu")
+        sphinx = tk.Label(c, image=img, bg=CONFIG["background"])
+        sphinx.image = img   # keep a reference so Tk doesn't drop the pixels
         sphinx.pack(pady=(0, 14))
-        self._blink_sphinx(sphinx, [
-            (_SPHINX_OPEN, 550), (_SPHINX_SHUT, 120),
-            (_SPHINX_OPEN, 200), (_SPHINX_SHUT, 120), (_SPHINX_OPEN, 50),
-        ])
 
         # Version, pinned quietly to the bottom edge (small, dim).
         tk.Label(c, text=f"- version {__version__} -", font=self.small_font,
@@ -867,16 +972,6 @@ class App:
         self._menu_button(c, "About", "the project, and how to reach me",
                           PALETTE["blue"], self.show_about, key=4)
         self._menu_button(c, "Quit", "", PALETTE["red"], self.root.destroy, key=5)
-
-    def _blink_sphinx(self, label, frames, i: int = 0) -> None:
-        """Play the sphinx's wake-up blink, stopping quietly if the label is
-        gone (the user left the menu before it finished)."""
-        try:
-            text, delay = frames[i]
-            label.configure(text=text)
-        except (tk.TclError, IndexError):
-            return
-        label.after(delay, lambda: self._blink_sphinx(label, frames, i + 1))
 
     def show_practice(self) -> None:
         self._clear()
@@ -923,6 +1018,14 @@ class App:
                         cursor="hand2")
         link.pack(pady=(0, 10))
         link.bind("<Button-1>", lambda e: self._open_url(f"https://{github}"))
+
+        # The sphinx and its companions (the four canopic jars) — a decorative
+        # banner. Skipped silently if the image can't be loaded.
+        jars = _load_image("about")
+        if jars is not None:
+            banner = tk.Label(c, image=jars, bg=CONFIG["background"])
+            banner.image = jars
+            banner.pack(pady=(0, 12))
 
         # The README, rendered in the app's palette inside a scrollable pane so
         # the whole file is readable without leaving the game's look.
