@@ -2,4 +2,4 @@ __pycache__/
 *.pyc
 .venv/
 .claude/settings.local.json
-riddles/content/leaderboard.json
+sphinx/content/leaderboard.json
