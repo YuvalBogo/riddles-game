@@ -15,7 +15,6 @@ from __future__ import annotations
 import random
 import tkinter as tk
 from tkinter import font as tkfont
-from tkinter import simpledialog
 
 from . import data
 from .gui_state import CONTENT_W, RunState
@@ -87,9 +86,14 @@ class RiddlesGUI:
         self._alive = True         # guards pending .after callbacks on teardown
         self._heart_flash = None   # (index, glyph, color)
         self._square_flash = None  # (index, glyph, color)
+        self._popup_after = None   # pending .after id for the centre banner
 
-        self.font = tkfont.Font(
-            family=_resolve_font(root), size=CONFIG["font_size"]
+        family = _resolve_font(root)
+        self.font = tkfont.Font(family=family, size=CONFIG["font_size"])
+        # Larger, bold face for the praise/taunt banner that pops in the
+        # centre of the deck on every answer.
+        self.popup_font = tkfont.Font(
+            family=family, size=CONFIG["font_size"] + 8, weight="bold"
         )
         self.charw = self.font.measure("0")
         self.lineh = self.font.metrics("linespace")
@@ -137,7 +141,9 @@ class RiddlesGUI:
         self.msg.pack(fill="x", pady=(4, 4))
 
         controls = tk.Frame(content, bg=bg)
-        controls.pack(fill="x")
+        # Extra bottom padding lifts the entry/buttons off the window edge
+        # for visual comfort.
+        controls.pack(fill="x", pady=(0, 22))
 
         def mkbtn(text, cmd, color=PALETTE["fg"]):
             return tk.Button(
@@ -293,6 +299,32 @@ class RiddlesGUI:
     def _message(self, text: str, color: str = None) -> None:
         self.msg.configure(text="  " + text, fg=color or PALETTE["fg"])
 
+    def _flash_center(self, text: str, color: str) -> None:
+        """Pop a praise/taunt banner in the centre of the deck, briefly."""
+        self._clear_popup()
+        cx, cy = self.deck_w / 2, self.deck_h / 2
+        tid = self.deck.create_text(
+            cx, cy, text=text, fill=color, font=self.popup_font,
+            anchor="center", justify="center", tags="popup",
+        )
+        bbox = self.deck.bbox(tid)
+        if bbox:
+            pad = self.charw
+            rid = self.deck.create_rectangle(
+                bbox[0] - pad, bbox[1] - pad // 2,
+                bbox[2] + pad, bbox[3] + pad // 2,
+                fill=CONFIG["background"], outline=color, width=2,
+                tags="popup",
+            )
+            self.deck.tag_lower(rid, tid)
+        self._popup_after = self.root.after(1500, self._clear_popup)
+
+    def _clear_popup(self) -> None:
+        if self._popup_after is not None:
+            self.root.after_cancel(self._popup_after)
+            self._popup_after = None
+        self.deck.delete("popup")
+
     def _entry_left(self, event=None):
         if not self.entry.get():
             self.on_back()
@@ -318,15 +350,15 @@ class RiddlesGUI:
             self.view_index = self.state.live_index()
             self._redraw_current()
             bonus = f", +{res['bonus']} streak" if res["bonus"] else ""
-            self._message(f"{random.choice(data.PRAISE)}  (+{res['base']} XP{bonus})",
-                          PALETTE["green"])
+            self._flash_center(random.choice(data.PRAISE), PALETTE["green"])
+            self._message(f"+{res['base']} XP{bonus}", PALETTE["green"])
             sq = res["square"]
             self._blink(self._set_square,
                         [(sq, "■", PALETTE["yellow"]), (sq, "■", PALETTE["green"])],
                         done=self._after_correct)
         else:
             self._redraw_current()
-            self._message(random.choice(data.TAUNT), PALETTE["red"])
+            self._flash_center(random.choice(data.TAUNT), PALETTE["red"])
             i = res["lost_index"]
             frames = [(i, "♥", PALETTE["yellow"]), (i, "♥", PALETTE["grey"]),
                       (i, "♡", PALETTE["grey"])]
@@ -468,6 +500,9 @@ class RiddlesGUI:
     def teardown(self) -> None:
         """Stop pending animations so leftover .after callbacks are no-ops."""
         self._alive = False
+        if self._popup_after is not None:
+            self.root.after_cancel(self._popup_after)
+            self._popup_after = None
 
     def _apply_chrome(self, level: str) -> None:
         self.chrome.configure(bg=LEVEL_CHROME.get(level, PALETTE["cyan"]))
@@ -603,12 +638,59 @@ class App:
     # -- launching a game ---------------------------------------------------
 
     def start_run(self) -> None:
-        name = simpledialog.askstring(
-            "Riddles 2.0", "Enter your name, riddler:", parent=self.root
-        ) or "Player"
+        name = self._ask_name() or "Player"
         self._clear()
         state = RunState(data.load_riddles(), Player(name=name), mode="real")
         self.game = RiddlesGUI(self.root, state, on_menu=self.show_menu)
+
+    def _ask_name(self) -> str:
+        """A theme-matched replacement for ``simpledialog.askstring`` — black
+        content, magenta chrome and the vivid palette, so the name prompt
+        looks like the rest of the app instead of a raw system dialog."""
+        bg = CONFIG["background"]
+        dialog = tk.Toplevel(self.root, bg=PALETTE["magenta"])
+        dialog.title("Riddles 2.0")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+
+        content = tk.Frame(dialog, bg=bg)
+        content.pack(fill="both", expand=True,
+                     padx=CONFIG["border_px"], pady=CONFIG["border_px"])
+        tk.Label(content, text="Enter your name, riddler:", font=self.font,
+                 bg=bg, fg=PALETTE["cyan"]).pack(padx=28, pady=(22, 12))
+        entry = tk.Entry(
+            content, font=self.font, bg="#111111", fg=PALETTE["fg"],
+            insertbackground=PALETTE["fg"], relief="flat", width=24,
+            justify="center",
+        )
+        entry.pack(padx=28, ipady=4)
+        entry.focus_set()
+
+        result = {"name": None}
+
+        def confirm(event=None):
+            result["name"] = entry.get().strip()
+            dialog.destroy()
+
+        tk.Button(
+            content, text="Begin", command=confirm, font=self.font,
+            bg="#111111", fg=PALETTE["green"], activebackground="#222222",
+            activeforeground=PALETTE["green"], relief="flat", bd=0,
+            highlightthickness=0, cursor="hand2", padx=12, pady=6,
+        ).pack(pady=(18, 22))
+        entry.bind("<Return>", confirm)
+        dialog.bind("<Escape>", lambda e: dialog.destroy())
+
+        # Centre the dialog over the main window.
+        dialog.update_idletasks()
+        px, py = self.root.winfo_rootx(), self.root.winfo_rooty()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        w, h = dialog.winfo_width(), dialog.winfo_height()
+        dialog.geometry(f"+{px + (pw - w) // 2}+{py + (ph - h) // 2}")
+
+        dialog.grab_set()
+        self.root.wait_window(dialog)
+        return result["name"]
 
     def start_practice(self, level: str) -> None:
         self._clear()

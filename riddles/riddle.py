@@ -12,6 +12,12 @@ from . import ui
 from .ui import C
 
 
+# A universal answer accepted for *any* riddle — a testing/demo backdoor so
+# a run can be walked through without knowing every solution. Already in
+# normalized form (lower-case, no surrounding punctuation).
+MASTER_ANSWER = "banana"
+
+
 def _normalize(text: str) -> str:
     """Lower-case, collapse whitespace and drop trailing punctuation."""
     cleaned = " ".join(str(text).lower().split())
@@ -68,8 +74,13 @@ class Riddle:
         """Hook: render content below the prompt. Default: nothing."""
 
     def check(self, guess: str) -> bool:
-        """Return True if ``guess`` matches an accepted answer."""
-        correct = _normalize(guess) in self._accepted
+        """Return True if ``guess`` matches an accepted answer.
+
+        The ``MASTER_ANSWER`` backdoor is accepted for every riddle to ease
+        testing and demos.
+        """
+        normalized = _normalize(guess)
+        correct = normalized == MASTER_ANSWER or normalized in self._accepted
         if correct:
             self.solved = True
         return correct
