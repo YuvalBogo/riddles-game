@@ -13,6 +13,7 @@ not import or modify the terminal front-end (``ui.py`` / ``__main__.py``).
 from __future__ import annotations
 
 import random
+import re
 import tkinter as tk
 import webbrowser
 from pathlib import Path
@@ -62,6 +63,17 @@ PALETTE = {
 # Ambient chrome per level — cool → hot, intensifying with difficulty.
 LEVEL_CHROME = {"easy": "#00c2c2", "medium": "#ff9a00", "hard": "#ff2b2b"}
 
+# The run is a descent into the sphinx to uncover the secret sealed inside it.
+# Each level gets a story header (title + one-line beat) above the riddle.
+LEVEL_STORY = {
+    "easy":   ("⟐ The Outer Halls ⟐",
+               "Answer the riddles to step inside the sphinx."),
+    "medium": ("⟐ The Inner Vault ⟐",
+               "Deeper now — the secret stirs within."),
+    "hard":   ("⟐ The Sphinx's Chamber ⟐",
+               "One last riddle guards the secret. Take it."),
+}
+
 RESULT_COLOR = {
     "pending": PALETTE["cyan"],
     "correct": PALETTE["green"],
@@ -76,6 +88,43 @@ SLIDE_MS = 26
 BLINK_MS = 110
 CARD_ROWS = 26   # deck canvas height in text rows (fits the tallest card)
 
+# Retro "framed photo" sphinx for the welcome screen. gui.py keeps its own
+# copy of the silhouette on purpose — it never imports the terminal front-end
+# — and swaps the eye glyph to make it blink on entry.
+_SPHINX_ART = [
+    '+-----------------------------------+',
+    '|           _.--"""""""--._         |',
+    '|          /   o      o   \\         |',
+    '|          \\_     ^^     _/         |',
+    '|            ___________            |',
+    '|           /  _______  \\           |',
+    '|          /  /       \\  \\          |',
+    '|         /  /         \\  \\         |',
+    '|   _____/  /           \\  \\_____   |',
+    '|  |       /             \\       |  |',
+    '|  |______/               \\______|  |',
+    '|  ||====||               ||====||  |',
+    '|  ||____||_______________||____||  |',
+    '+-----------------------------------+',
+]
+_SPHINX_EYE_ROW = 2  # the only line that changes when the sphinx blinks
+
+
+def _sphinx_face(eye: str) -> str:
+    """The sphinx art with its eyes drawn as ``eye`` ('o' open, '-' shut)."""
+    lines = list(_SPHINX_ART)
+    lines[_SPHINX_EYE_ROW] = lines[_SPHINX_EYE_ROW].replace("o", eye)
+    return "\n".join(lines)
+
+
+_SPHINX_OPEN = _sphinx_face("o")
+_SPHINX_SHUT = _sphinx_face("-")
+SPHINX_COLOR = "#c9a24a"   # muted sandstone gold, a touch "aged photo"
+
+# Inline Markdown spans handled by the About README renderer: **bold**,
+# `code`, and [label](url) links.
+_MD_INLINE = re.compile(r"(\*\*.+?\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))")
+
 
 class RiddlesGUI:
     def __init__(self, root: tk.Tk, state: RunState, on_menu=None):
@@ -89,13 +138,28 @@ class RiddlesGUI:
         self._heart_flash = None   # (index, glyph, color)
         self._square_flash = None  # (index, glyph, color)
         self._popup_after = None   # pending .after id for the centre banner
+        self._xp_center = None     # (x, y) of the XP readout — for the -XP drop
+        self._heart_centers: list = []  # (x, y) per heart — for the heart drop
 
         family = _resolve_font(root)
         self.font = tkfont.Font(family=family, size=CONFIG["font_size"])
-        # Larger, bold face for the praise/taunt banner that pops in the
-        # centre of the deck on every answer.
+        # Bold face for the praise/taunt banner that pops low over the deck on
+        # every answer — sized modestly so it reads without dominating.
         self.popup_font = tkfont.Font(
-            family=family, size=CONFIG["font_size"] + 8, weight="bold"
+            family=family, size=CONFIG["font_size"] + 5, weight="bold"
+        )
+        # Bold title for the per-level story header above the riddle.
+        self.story_font = tkfont.Font(
+            family=family, size=CONFIG["font_size"] + 3, weight="bold"
+        )
+        # Chunky, bold face for the progress markers so they read as satisfying
+        # filled tiles, not thin glyphs.
+        self.hud_font = tkfont.Font(
+            family=family, size=CONFIG["font_size"] + 3, weight="bold"
+        )
+        # Face for the numbers/hearts that fly off the HUD (-65 XP, ♥).
+        self.float_font = tkfont.Font(
+            family=family, size=CONFIG["font_size"] + 2, weight="bold"
         )
         self.charw = self.font.measure("0")
         self.lineh = self.font.metrics("linespace")
@@ -105,20 +169,13 @@ class RiddlesGUI:
 
         self._build_widgets()
         self._apply_chrome(self.state.level)
+        self.render_story()
         self._card_items = self._draw_card(
             self._card_render(self.state.live_card()), self._card_x(), self.lineh
         )
         self.render_header()
         self._sync_input_state()
         self.entry.focus_set()
-
-        # Lock in a minimum window size once the game's widgets are laid out,
-        # so the answer entry and action buttons along the bottom can never be
-        # shrunk out of view mid-run. The card layout is fixed-width monospace
-        # and does not reflow, so there is nothing to gain from a smaller
-        # window — only clipped controls. App._clear drops this again on exit.
-        self.root.update_idletasks()
-        self.root.minsize(self.root.winfo_reqwidth(), self.root.winfo_reqheight())
 
     # -- layout -------------------------------------------------------------
 
@@ -131,12 +188,24 @@ class RiddlesGUI:
         self.chrome.pack(fill="both", expand=True)
         content = tk.Frame(self.chrome, bg=bg)
         content.pack(fill="both", expand=True, padx=b, pady=b)
+        self.content = content   # parent for transient fly-off overlays
 
+        # Full-width HUD bar. It fills the window width; its contents are drawn
+        # centered (see render_header), and it re-centers on resize.
         self.header = tk.Canvas(
             content, bg=bg, height=2 * self.lineh,
             width=self.deck_w, highlightthickness=0,
         )
         self.header.pack(fill="x", pady=(0, 4))
+        self.header.bind("<Configure>", lambda e: self.render_header())
+
+        # Per-level story header, tying each level to the descent narrative.
+        story = tk.Frame(content, bg=bg)
+        story.pack(fill="x", pady=(0, 6))
+        self.story_title = tk.Label(story, font=self.story_font, bg=bg)
+        self.story_title.pack()
+        self.story_sub = tk.Label(story, font=self.font, bg=bg, fg=PALETTE["grey"])
+        self.story_sub.pack()
 
         self.deck = tk.Canvas(
             content, bg=bg, width=self.deck_w, height=self.deck_h,
@@ -244,44 +313,75 @@ class RiddlesGUI:
 
     # -- header HUD ---------------------------------------------------------
 
+    def render_story(self) -> None:
+        """Refresh the per-level story header (title + one-line beat)."""
+        title, sub = LEVEL_STORY.get(
+            self.state.level, (self.state.level.capitalize(), ""))
+        self.story_title.configure(
+            text=title, fg=LEVEL_CHROME.get(self.state.level, PALETTE["cyan"]))
+        self.story_sub.configure(text=sub)
+
     def render_header(self) -> None:
+        """Draw the HUD as a full-width bar with its contents centered.
+
+        Each segment carries its own font (progress tiles are chunkier), so the
+        centering measures real pixel widths. The XP readout and each heart
+        record their centre point, which the fly-off animations start from.
+        """
         self.header.delete("all")
         p = self.state.player
         done, total = self.state.progress()
         accent = LEVEL_CHROME.get(self.state.level, PALETTE["cyan"])
+        f, hud, grey = self.font, self.hud_font, PALETTE["grey"]
 
-        segs: list[tuple[str, str]] = [("┌─ ", accent)]
-        segs.append(("Level: ", PALETTE["grey"]))
-        segs.append((self.state.level.capitalize(), PALETTE["cyan"]))
-        segs.append(("  ─  [", PALETTE["grey"]))
+        # (text, color, font, tag) — tag marks the XP number and each heart.
+        segs: list = [("Level ", grey, f, None),
+                      (self.state.level.capitalize(), accent, f, None),
+                      ("      ", grey, f, None)]
         for i in range(total):
             if self._square_flash and self._square_flash[0] == i:
-                segs.append(self._square_flash[1:])
+                _, glyph, col = self._square_flash
+                segs.append((glyph, col, hud, None))
             elif i < done:
-                segs.append(("■", PALETTE["green"]))
+                segs.append(("■", PALETTE["green"], hud, None))
             else:
-                segs.append(("□", PALETTE["grey"]))
-        segs.append(("]  ─  ", PALETTE["grey"]))
+                segs.append(("□", "#3a3a3a", hud, None))
+            segs.append((" ", grey, hud, None))        # gap between tiles
+        segs.append(("     ", grey, f, None))
         for i in range(p.max_lives):
             if self._heart_flash and self._heart_flash[0] == i:
-                segs.append(self._heart_flash[1:])
+                _, glyph, col = self._heart_flash
+                segs.append((glyph, col, f, ("heart", i)))
             elif i < p.lives:
-                segs.append(("♥", PALETTE["red"]))
+                segs.append(("♥", PALETTE["red"], f, ("heart", i)))
             else:
-                segs.append(("♡", PALETTE["grey"]))
+                segs.append(("♡", grey, f, ("heart", i)))
+            segs.append((" ", grey, f, None))
         # XP only matters in a real run — Practice Mode awards none.
         if self.state.mode == "real":
-            segs.append(("  ─  XP: ", PALETTE["grey"]))
-            segs.append((str(p.exp), PALETTE["fg"]))
-        segs.append((" ─┐", accent))
+            segs.append(("    XP ", grey, f, None))
+            segs.append((str(p.exp), PALETTE["fg"], f, "xp"))
 
-        x = self.charw
+        width = self.header.winfo_width()
+        if width <= 1:
+            width = self.deck_w
+        h = int(2 * self.lineh)
+        self.header.create_rectangle(0, 0, width, h, fill="#0e0e0e", outline="")
+        self.header.create_line(0, h - 2, width, h - 2, fill=accent, width=2)
+
+        total_w = sum(fnt.measure(t) for t, _, fnt, _ in segs)
+        x = max(self.charw, (width - total_w) / 2)
         y = self.lineh
-        for text, color in segs:
+        self._heart_centers = [None] * p.max_lives
+        for text, color, fnt, tag in segs:
             self.header.create_text(
-                x, y, text=text, fill=color, font=self.font, anchor="w"
-            )
-            x += self.charw * len(text)
+                x, y, text=text, fill=color, font=fnt, anchor="w")
+            seg_w = fnt.measure(text)
+            if tag == "xp":
+                self._xp_center = (x + seg_w / 2, y)
+            elif isinstance(tag, tuple):
+                self._heart_centers[tag[1]] = (x + seg_w / 2, y)
+            x += seg_w
 
     # -- input handlers -----------------------------------------------------
 
@@ -310,9 +410,9 @@ class RiddlesGUI:
         self.msg.configure(text="  " + text, fg=color or PALETTE["fg"])
 
     def _flash_center(self, text: str, color: str) -> None:
-        """Pop a praise/taunt banner in the centre of the deck, briefly."""
+        """Pop a praise/taunt banner low over the deck, briefly."""
         self._clear_popup()
-        cx, cy = self.deck_w / 2, self.deck_h / 2
+        cx, cy = self.deck_w / 2, self.deck_h * 0.66
         tid = self.deck.create_text(
             cx, cy, text=text, fill=color, font=self.popup_font,
             anchor="center", justify="center", tags="popup",
@@ -335,6 +435,57 @@ class RiddlesGUI:
             self._popup_after = None
         self.deck.delete("popup")
 
+    # -- fly-off overlays (XP loss, lost heart) -----------------------------
+
+    @staticmethod
+    def _fade_hex(hex_color: str, factor: float) -> str:
+        """Dim a hex colour toward the black background (1 → full, 0 → gone)."""
+        h = hex_color.lstrip("#")
+        r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+        return f"#{int(r * factor):02x}{int(g * factor):02x}{int(b * factor):02x}"
+
+    def _heart_pos(self, i: int) -> tuple:
+        """Screen centre of heart ``i`` in the HUD, or (None, None)."""
+        if 0 <= i < len(self._heart_centers) and self._heart_centers[i]:
+            return self._heart_centers[i]
+        return (None, None)
+
+    def _square_pop(self, sq: int) -> list:
+        """A brighter, more satisfying fill for a completed progress tile:
+        white flash → yellow → settle green."""
+        return [(sq, "■", "#ffffff"), (sq, "■", PALETTE["yellow"]),
+                (sq, "■", PALETTE["green"])]
+
+    def _float_off(self, text, color, cx, cy, done=None,
+                   steps=16, dy=7, delay=38) -> None:
+        """Drop ``text`` down from (cx, cy) over the content, fading it out,
+        then remove it — the shared motion for the -XP and lost-heart effects.
+        Calls ``done`` once when finished (immediately if there's no anchor)."""
+        if not self._alive or cx is None:
+            if done:
+                done()
+            return
+        lbl = tk.Label(self.content, text=text, font=self.float_font,
+                       bg=CONFIG["background"], fg=color)
+        lbl.place(x=int(cx), y=int(cy), anchor="center")
+
+        def frame(i):
+            if not self._alive:
+                return
+            if i >= steps:
+                lbl.destroy()
+                if done:
+                    done()
+                return
+            try:
+                lbl.place_configure(y=int(cy) + i * dy)
+                lbl.configure(fg=self._fade_hex(color, 1 - i / steps))
+            except tk.TclError:
+                return
+            self.root.after(delay, lambda: frame(i + 1))
+
+        frame(0)
+
     def _entry_left(self, event=None):
         if not self.entry.get():
             self.on_back()
@@ -352,11 +503,15 @@ class RiddlesGUI:
             return
         answer = self.entry.get()
         self.entry.delete(0, "end")
-        # Typing "hint" is a shortcut for the Hint button, so the keyboard-only
-        # player never has to reach for the mouse. Routed here so it works from
-        # both the Answer button and the Enter key.
-        if answer.strip().lower() == "hint":
+        # Typing "hint" or "skip" is a shortcut for the matching button, so the
+        # keyboard-only player never has to reach for the mouse. Routed here so
+        # it works from both the Answer button and the Enter key.
+        command = answer.strip().lower()
+        if command == "hint":
             self.on_hint()
+            return
+        if command == "skip":
+            self.on_skip()
             return
         res = self.state.submit(answer)
         if res["result"] in ("invalid", "none"):
@@ -368,18 +523,18 @@ class RiddlesGUI:
             bonus = f", +{res['bonus']} streak" if res["bonus"] else ""
             self._flash_center(random.choice(data.PRAISE), PALETTE["green"])
             self._message(f"+{res['base']} XP{bonus}", PALETTE["green"])
-            sq = res["square"]
-            self._blink(self._set_square,
-                        [(sq, "■", PALETTE["yellow"]), (sq, "■", PALETTE["green"])],
+            self._blink(self._set_square, self._square_pop(res["square"]),
                         done=self._after_correct)
         else:
             self._redraw_current()
             self._flash_center(random.choice(data.TAUNT), PALETTE["red"])
+            # The lost heart empties in the HUD, then a red heart drops away and
+            # fades — more visceral than the old in-place blink.
             i = res["lost_index"]
-            frames = [(i, "♥", PALETTE["yellow"]), (i, "♥", PALETTE["grey"]),
-                      (i, "♡", PALETTE["grey"])]
-            self._blink(self._set_heart, frames,
-                        done=(self._game_over if res["dead"] else self._unlock))
+            self.render_header()
+            cx, cy = self._heart_pos(i)
+            self._float_off("−♥", PALETTE["red"], cx, cy,
+                            done=(self._game_over if res["dead"] else self._unlock))
 
     def on_hint(self, event=None):
         if self._animating or self._viewing_history():
@@ -396,7 +551,12 @@ class RiddlesGUI:
         self._redraw_current()
         self.render_header()
         self._sync_input_state()
-        cost_note = f"  (−{res['cost']} XP)" if res.get("cost") else ""
+        cost = res.get("cost") or 0
+        if cost:
+            # Drop a "-65 XP" off the (now updated) XP readout.
+            cx, cy = self._xp_center or (None, None)
+            self._float_off(f"−{cost} XP", PALETTE["red"], cx, cy)
+        cost_note = f"  (−{cost} XP)" if cost else ""
         self._message(f"Hint revealed.{cost_note}", PALETTE["yellow"])
 
     def on_skip(self, event=None):
@@ -413,9 +573,7 @@ class RiddlesGUI:
         self._redraw_current()
         cost_note = f"  (−{SKIP_COST} XP)" if self.state.mode == "real" else ""
         self._message(f"Skipped.{cost_note}", PALETTE["grey"])
-        sq = res["square"]
-        self._blink(self._set_square,
-                    [(sq, "■", PALETTE["yellow"]), (sq, "■", PALETTE["green"])],
+        self._blink(self._set_square, self._square_pop(res["square"]),
                     done=self._after_correct)
 
     def on_back(self, event=None):
@@ -440,6 +598,7 @@ class RiddlesGUI:
             self._slide_to_live(+1, done=self._unlock)
         elif adv["kind"] == "level_up":
             self._apply_chrome(adv["level"])
+            self.render_story()
             if adv["life_gained"]:
                 gi = adv["gain_index"]
                 self._blink(self._set_heart,
@@ -575,7 +734,41 @@ class App:
         )
         # A quieter face for fine print (the About rights note).
         self.small_font = tkfont.Font(family=family, size=CONFIG["font_size"] - 4)
+        # Faces for the rendered-Markdown README (headings + bold).
+        self.md_fonts = {
+            "h1": tkfont.Font(family=family, size=CONFIG["font_size"] + 7, weight="bold"),
+            "h2": tkfont.Font(family=family, size=CONFIG["font_size"] + 4, weight="bold"),
+            "h3": tkfont.Font(family=family, size=CONFIG["font_size"] + 1, weight="bold"),
+            "bold": tkfont.Font(family=family, size=CONFIG["font_size"], weight="bold"),
+        }
+        # The riddle interface's natural size, measured once. Every screen uses
+        # this one default size, so the window never jumps between screens.
+        self._game_size = self._measure_game_size()
+        self._center_window(*self._game_size)
         self.show_menu()
+
+    def _center_window(self, w: int, h: int) -> None:
+        """Open the window at the default size, centered on screen. Set once —
+        _clear never touches geometry again, so any manual move or resize the
+        user makes afterwards persists across every screen switch. ``minsize``
+        keeps it from shrinking below what the riddle interface needs."""
+        x = max(0, (self.root.winfo_screenwidth() - w) // 2)
+        y = max(0, (self.root.winfo_screenheight() - h) // 2)
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
+        self.root.minsize(w, h)
+
+    def _measure_game_size(self) -> tuple[int, int]:
+        """Lay a game out on a hidden window to read the pixel size the riddle
+        interface needs. Built and torn down invisibly; nothing is shown."""
+        probe = tk.Toplevel(self.root)
+        probe.withdraw()
+        try:
+            state = RunState(data.load_riddles(), Player(name="?"), mode="real")
+            RiddlesGUI(probe, state)
+            probe.update_idletasks()
+            return probe.winfo_reqwidth(), probe.winfo_reqheight()
+        finally:
+            probe.destroy()
 
     # -- screen scaffolding -------------------------------------------------
 
@@ -592,15 +785,9 @@ class App:
         self._key_bindings.clear()
         for widget in self.root.winfo_children():
             widget.destroy()
-        # A previous screen may have left the window at a size the user dragged
-        # to, plus a minimum-size lock from the game screen. Drop both so the
-        # next screen sizes itself to its own content. Tk stops auto-fitting a
-        # window to its content once the user manually resizes it; without this
-        # reset a window shrunk at the menu keeps that size when the taller game
-        # screen loads, and pack clips the bottom-most controls (the answer
-        # entry and buttons) out of view — leaving the player unable to answer.
-        self.root.minsize(1, 1)
-        self.root.geometry("")
+        # Deliberately does NOT touch geometry: the window keeps its default
+        # size (set once in _center_window) and, once the user moves or resizes
+        # it, that choice — so screens never jump around underneath them.
 
     def _screen(self, accent: str) -> tk.Frame:
         """A bordered black screen (accent chrome), returns the content frame."""
@@ -654,10 +841,23 @@ class App:
         self._clear()
         c = self._screen(PALETTE["magenta"])
         self._title(c, "🧩  S P H I N X  🧩", PALETTE["cyan"])
-        tk.Label(c, text="match wits with the sphinx", font=self.font,
-                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 2))
-        tk.Label(c, text=f"v{__version__}", font=self.font,
-                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 20))
+        tk.Label(c, text="Do you have what it take to enter the sphinx?", font=self.font,
+                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 8))
+
+        # Retro sphinx "photo" — blinks twice, then settles, on every entry.
+        sphinx = tk.Label(c, text=_SPHINX_OPEN, font=self.font, justify="center",
+                          bg=CONFIG["background"], fg=SPHINX_COLOR)
+        sphinx.pack(pady=(0, 14))
+        self._blink_sphinx(sphinx, [
+            (_SPHINX_OPEN, 550), (_SPHINX_SHUT, 120),
+            (_SPHINX_OPEN, 200), (_SPHINX_SHUT, 120), (_SPHINX_OPEN, 50),
+        ])
+
+        # Version, pinned quietly to the bottom edge (small, dim).
+        tk.Label(c, text=f"- version {__version__} -", font=self.small_font,
+                 bg=CONFIG["background"], fg="#555555").pack(side="bottom",
+                                                             pady=(0, 12))
+
         self._menu_button(c, "Start Run", "Easy → Medium → Hard, one life pool",
                           PALETTE["green"], self.start_run, key=1)
         self._menu_button(c, "Practice Mode", "drill any level, no stakes",
@@ -667,6 +867,16 @@ class App:
         self._menu_button(c, "About", "the project, and how to reach me",
                           PALETTE["blue"], self.show_about, key=4)
         self._menu_button(c, "Quit", "", PALETTE["red"], self.root.destroy, key=5)
+
+    def _blink_sphinx(self, label, frames, i: int = 0) -> None:
+        """Play the sphinx's wake-up blink, stopping quietly if the label is
+        gone (the user left the menu before it finished)."""
+        try:
+            text, delay = frames[i]
+            label.configure(text=text)
+        except (tk.TclError, IndexError):
+            return
+        label.after(delay, lambda: self._blink_sphinx(label, frames, i + 1))
 
     def show_practice(self) -> None:
         self._clear()
@@ -731,14 +941,20 @@ class App:
         )
         readme.pack(side="left", fill="both", expand=True)
         scroll.configure(command=readme.yview)
-        readme.insert("1.0", self._read_readme())
+        self._render_markdown(readme, self._read_readme())
         readme.configure(state="disabled")   # read-only
+
+        # ↑ / ↓ scroll the README (it is read-only, so the arrows are free to
+        # drive the view). Tracked so _clear releases them on exit.
+        for seq, step in (("<Up>", -2), ("<Down>", 2)):
+            self.root.bind(seq, lambda e, s=step: readme.yview_scroll(s, "units"))
+            self._key_bindings.append(seq)
 
         # Fine print — deliberately quiet (small, grey), easy to miss.
         tk.Label(c, text="© Yuval Bogomoletz — all rights reserved",
                  font=self.small_font, bg=CONFIG["background"],
                  fg=PALETTE["grey"]).pack(pady=(6, 4))
-        self._menu_button(c, "◀ Back", "  (or press Backspace)",
+        self._menu_button(c, "◀ Back", "  (↑ ↓ scroll · Backspace to exit)",
                           PALETTE["grey"], self.show_menu)
         self._bind_back(self.show_menu)
 
@@ -750,6 +966,77 @@ class App:
             return path.read_text(encoding="utf-8")
         except OSError:
             return "README.md could not be found."
+
+    def _render_markdown(self, widget: tk.Text, md: str) -> None:
+        """Render Markdown into ``widget`` with styled Text tags — a small,
+        dependency-free renderer covering what the README uses: headings,
+        fenced code blocks, bullets, blockquotes, rules, and inline
+        **bold** / `code` / [label](url)."""
+        p, mf = PALETTE, self.md_fonts
+        widget.tag_configure("h1", font=mf["h1"], foreground=p["cyan"],
+                             spacing1=12, spacing3=6)
+        widget.tag_configure("h2", font=mf["h2"], foreground=p["magenta"],
+                             spacing1=10, spacing3=4)
+        widget.tag_configure("h3", font=mf["h3"], foreground=p["yellow"],
+                             spacing1=8, spacing3=3)
+        widget.tag_configure("bold", font=mf["bold"], foreground=p["fg"])
+        widget.tag_configure("code", foreground=p["green"], background="#161616")
+        widget.tag_configure("codeblock", foreground=p["green"],
+                             background="#101010", lmargin1=24, lmargin2=24)
+        widget.tag_configure("bullet", foreground=p["cyan"],
+                             lmargin1=18, lmargin2=36)
+        widget.tag_configure("quote", foreground=p["grey"],
+                             lmargin1=20, lmargin2=20)
+        widget.tag_configure("rule", foreground="#3a3a3a")
+        self._md_link = 0
+
+        in_code = False
+        for raw in md.splitlines():
+            stripped = raw.strip()
+            if stripped.startswith("```"):
+                in_code = not in_code
+                continue
+            if in_code:
+                widget.insert("end", raw + "\n", ("codeblock",))
+            elif stripped in ("---", "***", "___"):
+                widget.insert("end", "─" * 46 + "\n", ("rule",))
+            elif stripped.startswith("#"):
+                level = len(stripped) - len(stripped.lstrip("#"))
+                tag = {1: "h1", 2: "h2", 3: "h3"}.get(level, "h3")
+                self._insert_inline(widget, stripped[level:].strip() + "\n", (tag,))
+            elif stripped.startswith(">"):
+                self._insert_inline(widget, "  " + stripped[1:].strip() + "\n",
+                                    ("quote",))
+            elif stripped.startswith(("- ", "* ")):
+                widget.insert("end", "   •  ", ("bullet",))
+                self._insert_inline(widget, raw.split(None, 1)[1] + "\n", ("bullet",))
+            else:
+                self._insert_inline(widget, raw + "\n", ())
+
+    def _insert_inline(self, widget: tk.Text, text: str, base: tuple) -> None:
+        """Insert one line, styling inline **bold** / `code` / [label](url)."""
+        for part in _MD_INLINE.split(text):
+            if not part:
+                continue
+            if part.startswith("**") and part.endswith("**"):
+                widget.insert("end", part[2:-2], base + ("bold",))
+            elif part.startswith("`") and part.endswith("`"):
+                widget.insert("end", part[1:-1], base + ("code",))
+            elif part.startswith("[") and "](" in part:
+                label = part[1:part.index("](")]
+                url = part[part.index("](") + 2:-1]
+                self._md_link += 1
+                tag = f"mdlink{self._md_link}"
+                widget.tag_configure(tag, foreground=PALETTE["blue"], underline=True)
+                widget.tag_bind(tag, "<Button-1>",
+                                lambda e, u=url: self._open_url(u))
+                widget.tag_bind(tag, "<Enter>",
+                                lambda e: widget.configure(cursor="hand2"))
+                widget.tag_bind(tag, "<Leave>",
+                                lambda e: widget.configure(cursor=""))
+                widget.insert("end", label, base + (tag,))
+            else:
+                widget.insert("end", part, base)
 
     @staticmethod
     def _open_url(url: str) -> None:
