@@ -110,6 +110,14 @@ class RiddlesGUI:
         self._sync_input_state()
         self.entry.focus_set()
 
+        # Lock in a minimum window size once the game's widgets are laid out,
+        # so the answer entry and action buttons along the bottom can never be
+        # shrunk out of view mid-run. The card layout is fixed-width monospace
+        # and does not reflow, so there is nothing to gain from a smaller
+        # window — only clipped controls. App._clear drops this again on exit.
+        self.root.update_idletasks()
+        self.root.minsize(self.root.winfo_reqwidth(), self.root.winfo_reqheight())
+
     # -- layout -------------------------------------------------------------
 
     def _build_widgets(self) -> None:
@@ -563,6 +571,15 @@ class App:
         self.root.unbind("<Right>")
         for widget in self.root.winfo_children():
             widget.destroy()
+        # A previous screen may have left the window at a size the user dragged
+        # to, plus a minimum-size lock from the game screen. Drop both so the
+        # next screen sizes itself to its own content. Tk stops auto-fitting a
+        # window to its content once the user manually resizes it; without this
+        # reset a window shrunk at the menu keeps that size when the taller game
+        # screen loads, and pack clips the bottom-most controls (the answer
+        # entry and buttons) out of view — leaving the player unable to answer.
+        self.root.minsize(1, 1)
+        self.root.geometry("")
 
     def _screen(self, accent: str) -> tk.Frame:
         """A bordered black screen (accent chrome), returns the content frame."""
