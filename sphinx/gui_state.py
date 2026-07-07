@@ -15,7 +15,7 @@ import random
 from dataclasses import dataclass, field
 
 from . import data
-from .player import Player, SKIP_COST
+from .player import HINT_COST, Player, SKIP_COST
 from .riddle import AsciiArtRiddle, CipherRiddle, SequenceRiddle
 
 # Inner text width (characters) for a card — the GUI renders cards as
@@ -207,11 +207,17 @@ class RunState:
             return {"ok": False, "reason": "not_current"}
         if self.hints_left <= 0:
             return {"ok": False, "reason": "none"}
+        # A hint in a real run is bought with XP (like a skip); Practice Mode
+        # hints stay free. Refuse if the player can't cover the cost.
+        if self.mode == "real" and not self.player.can_hint():
+            return {"ok": False, "reason": "poor",
+                    "need": HINT_COST, "have": self.player.exp}
+        cost = HINT_COST if self.mode == "real" else 0
         self.hints_left -= 1
-        self.player.use_hint()
+        self.player.use_hint(cost=cost)
         text = self.current_riddle().get_hint()
         card.hints.extend(text.splitlines())
-        return {"ok": True, "hints_left": self.hints_left}
+        return {"ok": True, "hints_left": self.hints_left, "cost": cost}
 
     def advance(self) -> dict:
         """Move to the next riddle / level / end. Appends the next card."""

@@ -25,6 +25,9 @@ BASE_XP = 10
 # Skipping in a real run costs this much, drawn from the same XP pool.
 SKIP_COST = 65
 
+# Revealing a hint in a real run costs this much, from the same XP pool.
+HINT_COST = 65
+
 # Streak bonus kicks in from the 3rd consecutive correct answer and grows
 # by +2 for each further one: 3rd → +2, 4th → +4, 5th → +6, ...
 def _streak_bonus(streak: int) -> int:
@@ -81,8 +84,14 @@ class Player:
         self.exp += base + bonus
         return (base, bonus)
 
-    def use_hint(self) -> None:
+    def use_hint(self, cost: int = 0) -> None:
         self.hints_used += 1
+        if cost:
+            self.exp = max(0, self.exp - cost)
+
+    def can_hint(self) -> bool:
+        """Whether the player can afford a real-run hint (costs HINT_COST)."""
+        return self.exp >= HINT_COST
 
     def can_skip(self) -> bool:
         """Whether the player can afford a real-run skip (costs SKIP_COST)."""

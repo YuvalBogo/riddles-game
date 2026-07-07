@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import random
 import tkinter as tk
+import webbrowser
+from pathlib import Path
 from tkinter import font as tkfont
 
 from . import __version__, data
@@ -350,6 +352,12 @@ class RiddlesGUI:
             return
         answer = self.entry.get()
         self.entry.delete(0, "end")
+        # Typing "hint" is a shortcut for the Hint button, so the keyboard-only
+        # player never has to reach for the mouse. Routed here so it works from
+        # both the Answer button and the Enter key.
+        if answer.strip().lower() == "hint":
+            self.on_hint()
+            return
         res = self.state.submit(answer)
         if res["result"] in ("invalid", "none"):
             return
@@ -378,13 +386,18 @@ class RiddlesGUI:
             return
         res = self.state.use_hint()
         if not res["ok"]:
-            self._message("No hints left for this level." if res.get("reason") == "none"
-                          else "Not available.", PALETTE["yellow"])
+            if res.get("reason") == "poor":
+                self._message(f"Need {res['need']} XP for a hint (you have {res['have']}).",
+                              PALETTE["yellow"])
+            else:
+                self._message("No hints left for this level." if res.get("reason") == "none"
+                              else "Not available.", PALETTE["yellow"])
             return
         self._redraw_current()
         self.render_header()
         self._sync_input_state()
-        self._message("Hint revealed.", PALETTE["yellow"])
+        cost_note = f"  (−{res['cost']} XP)" if res.get("cost") else ""
+        self._message(f"Hint revealed.{cost_note}", PALETTE["yellow"])
 
     def on_skip(self, event=None):
         if self._animating or self._viewing_history():
@@ -554,11 +567,14 @@ class App:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.game: RiddlesGUI | None = None
+        self._key_bindings: list[str] = []  # root key shortcuts for the live screen
         family = _resolve_font(root)
         self.font = tkfont.Font(family=family, size=CONFIG["font_size"])
         self.title_font = tkfont.Font(
             family=family, size=CONFIG["font_size"] + 6, weight="bold"
         )
+        # A quieter face for fine print (the About rights note).
+        self.small_font = tkfont.Font(family=family, size=CONFIG["font_size"] - 4)
         self.show_menu()
 
     # -- screen scaffolding -------------------------------------------------
@@ -569,6 +585,11 @@ class App:
             self.game = None
         self.root.unbind("<Left>")
         self.root.unbind("<Right>")
+        # Release this screen's number-key shortcuts so they never fire while
+        # a later screen (e.g. a running game) is shown.
+        for seq in self._key_bindings:
+            self.root.unbind(seq)
+        self._key_bindings.clear()
         for widget in self.root.winfo_children():
             widget.destroy()
         # A previous screen may have left the window at a size the user dragged
@@ -594,9 +615,15 @@ class App:
         tk.Label(parent, text=text, font=self.title_font,
                  bg=CONFIG["background"], fg=color).pack(pady=(28, 6))
 
-    def _menu_button(self, parent, label, desc, color, cmd) -> None:
+    def _menu_button(self, parent, label, desc, color, cmd, key=None) -> None:
         row = tk.Frame(parent, bg=CONFIG["background"])
         row.pack(fill="x", padx=60, pady=6)
+        if key is not None:
+            # A dim shortcut digit to the left of the button — quiet enough not
+            # to clutter the screen, but a hint that the number key works too.
+            tk.Label(row, text=str(key), font=self.font, width=2,
+                     bg=CONFIG["background"], fg=PALETTE["grey"]).pack(side="left")
+            self._bind_key(key, cmd)
         tk.Button(
             row, text=label, command=cmd, font=self.font, width=16,
             bg="#111111", fg=color, activebackground="#222222",
@@ -606,6 +633,20 @@ class App:
             tk.Label(row, text=desc, font=self.font,
                      bg=CONFIG["background"], fg=PALETTE["grey"]).pack(
                 side="left", padx=14)
+
+    def _bind_key(self, digit: int, cmd) -> None:
+        """Bind a number key (top-row and keypad) to a menu action, tracking it
+        so ``_clear`` can release it when the screen changes."""
+        for seq in (f"<Key-{digit}>", f"<KP_{digit}>"):
+            self.root.bind(seq, lambda event, c=cmd: c())
+            self._key_bindings.append(seq)
+
+    def _bind_back(self, cmd) -> None:
+        """Bind Backspace as a 'back' shortcut for the current sub-screen,
+        tracked so ``_clear`` releases it on exit. Safe on screens whose only
+        text widgets are read-only, so the key is never needed for editing."""
+        self.root.bind("<BackSpace>", lambda event: cmd())
+        self._key_bindings.append("<BackSpace>")
 
     # -- screens ------------------------------------------------------------
 
@@ -618,24 +659,28 @@ class App:
         tk.Label(c, text=f"v{__version__}", font=self.font,
                  bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 20))
         self._menu_button(c, "Start Run", "Easy → Medium → Hard, one life pool",
-                          PALETTE["green"], self.start_run)
+                          PALETTE["green"], self.start_run, key=1)
         self._menu_button(c, "Practice Mode", "drill any level, no stakes",
-                          PALETTE["cyan"], self.show_practice)
+                          PALETTE["cyan"], self.show_practice, key=2)
         self._menu_button(c, "View Top 5", "the leaderboard",
-                          PALETTE["yellow"], self.show_leaderboard)
-        self._menu_button(c, "Quit", "", PALETTE["red"], self.root.destroy)
+                          PALETTE["yellow"], self.show_leaderboard, key=3)
+        self._menu_button(c, "About", "the project, and how to reach me",
+                          PALETTE["blue"], self.show_about, key=4)
+        self._menu_button(c, "Quit", "", PALETTE["red"], self.root.destroy, key=5)
 
     def show_practice(self) -> None:
         self._clear()
         c = self._screen(LEVEL_CHROME["easy"])
         self._title(c, "Practice — pick a level", PALETTE["cyan"])
         riddles = data.load_riddles()
-        for level in data.LEVELS:
+        for i, level in enumerate(data.LEVELS, start=1):
             self._menu_button(
                 c, level.capitalize(), f"{len(riddles[level])} riddles",
-                LEVEL_CHROME[level], lambda lv=level: self.start_practice(lv),
+                LEVEL_CHROME[level], lambda lv=level: self.start_practice(lv), key=i,
             )
-        self._menu_button(c, "◀ Back", "", PALETTE["grey"], self.show_menu)
+        self._menu_button(c, "◀ Back", "  (or press Backspace)",
+                          PALETTE["grey"], self.show_menu)
+        self._bind_back(self.show_menu)
 
     def show_leaderboard(self) -> None:
         self._clear()
@@ -652,7 +697,67 @@ class App:
                     font=self.font, bg=CONFIG["background"], fg=PALETTE["cyan"],
                 ).pack(pady=2)
         tk.Label(c, text="", bg=CONFIG["background"]).pack(pady=6)
-        self._menu_button(c, "◀ Back", "", PALETTE["grey"], self.show_menu)
+        self._menu_button(c, "◀ Back", "  (or press Backspace)",
+                          PALETTE["grey"], self.show_menu)
+        self._bind_back(self.show_menu)
+
+    def show_about(self) -> None:
+        self._clear()
+        c = self._screen(PALETTE["blue"])
+        self._title(c, "About Sphinx", PALETTE["cyan"])
+
+        # How to reach the author — a clickable GitHub link.
+        github = "github.com/YuvalBogo"
+        link = tk.Label(c, text=f"⤷  {github}", font=self.font,
+                        bg=CONFIG["background"], fg=PALETTE["magenta"],
+                        cursor="hand2")
+        link.pack(pady=(0, 10))
+        link.bind("<Button-1>", lambda e: self._open_url(f"https://{github}"))
+
+        # The README, rendered in the app's palette inside a scrollable pane so
+        # the whole file is readable without leaving the game's look.
+        pane = tk.Frame(c, bg=CONFIG["background"])
+        pane.pack(fill="both", expand=True, padx=40)
+        scroll = tk.Scrollbar(pane, bg="#111111", troughcolor=CONFIG["background"],
+                              activebackground=PALETTE["grey"], bd=0,
+                              highlightthickness=0)
+        scroll.pack(side="right", fill="y")
+        readme = tk.Text(
+            pane, font=self.font, bg=CONFIG["background"], fg=PALETTE["fg"],
+            relief="flat", bd=0, highlightthickness=0, wrap="word",
+            width=64, height=20, padx=12, pady=8,
+            yscrollcommand=scroll.set, insertbackground=PALETTE["fg"],
+            selectbackground="#333333",
+        )
+        readme.pack(side="left", fill="both", expand=True)
+        scroll.configure(command=readme.yview)
+        readme.insert("1.0", self._read_readme())
+        readme.configure(state="disabled")   # read-only
+
+        # Fine print — deliberately quiet (small, grey), easy to miss.
+        tk.Label(c, text="© Yuval Bogomoletz — all rights reserved",
+                 font=self.small_font, bg=CONFIG["background"],
+                 fg=PALETTE["grey"]).pack(pady=(6, 4))
+        self._menu_button(c, "◀ Back", "  (or press Backspace)",
+                          PALETTE["grey"], self.show_menu)
+        self._bind_back(self.show_menu)
+
+    @staticmethod
+    def _read_readme() -> str:
+        """Load the project README (one level up from this package)."""
+        path = Path(__file__).resolve().parent.parent / "README.md"
+        try:
+            return path.read_text(encoding="utf-8")
+        except OSError:
+            return "README.md could not be found."
+
+    @staticmethod
+    def _open_url(url: str) -> None:
+        """Open a link in the default browser, ignoring any launch failure."""
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
 
     # -- launching a game ---------------------------------------------------
 
