@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+.vscode/
 .claude/settings.local.json
 sphinx/content/leaderboard.json
 further_plans.md
