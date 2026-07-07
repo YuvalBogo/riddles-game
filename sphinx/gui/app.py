@@ -2,11 +2,11 @@
 
 This module is the entry point and the ``App`` controller: the main menu and
 the screens it leads to (Practice / Leaderboard / About), window sizing, and
-launching a run. The look lives in ``gui_theme``, images in ``gui_assets``,
-the hover tooltip in ``gui_widgets``, the README renderer in ``gui_markdown``,
-and the live game screen in ``gui_game`` (``RiddlesGUI``). The flow/scoring
-logic lives in ``gui_state.RunState``; nothing here imports the terminal
-front-end (``ui.py`` / ``__main__.py``).
+launching a run. Within the ``gui`` package: the look lives in ``theme``,
+images in ``assets``, the hover tooltip in ``widgets``, the README renderer in
+``markdown``, and the live game screen in ``game`` (``RiddlesGUI``). The
+flow/scoring logic lives in ``state.RunState``; nothing here imports the
+terminal front-end (``ui.py`` / ``__main__.py``).
 
 Requires ``tkinter`` (Fedora: ``sudo dnf install python3-tkinter``).
 """
@@ -16,15 +16,15 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import __version__, data
-from .gui_assets import load_image, natural_banner_height, set_banner_height
-from .gui_game import RiddlesGUI
-from .gui_markdown import open_url, read_readme
-from .gui_markdown import render as render_markdown
-from .gui_state import RunState
-from .gui_theme import CONFIG, LEVEL_CHROME, PALETTE, resolve_font
-from .gui_widgets import Tooltip
-from .player import Player
+from .. import __version__, data
+from ..player import Player
+from .assets import load_image, natural_banner_height, set_banner_height
+from .game import RiddlesGUI
+from .markdown import read_readme
+from .markdown import render as render_markdown
+from .state import RunState
+from .theme import CONFIG, LEVEL_CHROME, PALETTE, resolve_font
+from .widgets import Tooltip
 
 # Room (px) reserved for the window manager's chrome (title bar + panels) so a
 # screen never opens taller than the visible desktop. The Easy banner takes
@@ -86,7 +86,7 @@ class App:
         height; the banner takes only the vertical room left over on this
         screen — its full height on a tall display, a shrunk one on a laptop,
         or nothing at all when there's no room. Publishes the chosen banner
-        height to ``gui_assets`` and sets ``self._game_size``.
+        height to ``assets`` and sets ``self._game_size``.
         """
         usable_h = self.root.winfo_screenheight() - SCREEN_MARGIN
         usable_w = self.root.winfo_screenwidth() - SCREEN_MARGIN
@@ -280,23 +280,15 @@ class App:
     def show_about(self) -> None:
         self._clear()
         c = self._screen(PALETTE["blue"])
-        self._title(c, "About Sphinx", PALETTE["cyan"])
 
-        # How to reach the author — a clickable GitHub link.
-        github = "github.com/YuvalBogo"
-        link = tk.Label(c, text=f"⤷  {github}", font=self.font,
-                        bg=CONFIG["background"], fg=PALETTE["magenta"],
-                        cursor="hand2")
-        link.pack(pady=(0, 10))
-        link.bind("<Button-1>", lambda e: open_url(f"https://{github}"))
-
-        # The sphinx and its companions (the four canopic jars) — a decorative
-        # banner. Skipped silently if the image can't be loaded.
+        # The only fixed element up top: the sphinx and its companions (the four
+        # canopic jars). Everything else — including the contact/GitHub link —
+        # lives in the scrollable README below. Skipped if it can't be loaded.
         jars = load_image("about")
         if jars is not None:
             banner = tk.Label(c, image=jars, bg=CONFIG["background"])
             banner.image = jars
-            banner.pack(pady=(0, 12))
+            banner.pack(pady=(8, 12))
 
         # The README, rendered in the app's palette inside a scrollable pane so
         # the whole file is readable without leaving the game's look.
@@ -324,11 +316,15 @@ class App:
             self.root.bind(seq, lambda e, s=step: readme.yview_scroll(s, "units"))
             self._key_bindings.append(seq)
 
+        # Explicit scroll instruction at the bottom.
+        tk.Label(c, text="use ↑ / ↓ keys to scroll", font=self.small_font,
+                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(6, 0))
+
         # Fine print — deliberately quiet (small, grey), easy to miss.
         tk.Label(c, text="© Yuval Bogomoletz — all rights reserved",
                  font=self.small_font, bg=CONFIG["background"],
-                 fg=PALETTE["grey"]).pack(pady=(6, 4))
-        self._menu_button(c, "◀ Back", "  (↑ ↓ scroll · Backspace to exit)",
+                 fg=PALETTE["grey"]).pack(pady=(2, 4))
+        self._menu_button(c, "◀ Back", "(or press Backspace)",
                           PALETTE["grey"], self.show_menu)
         self._bind_back(self.show_menu)
 

@@ -2,7 +2,7 @@
 
 ``RiddlesGUI`` renders one run: the riddle-card deck, the HUD (progress tiles,
 hearts, XP), the per-level story header and banner, chunky un-eased animations,
-and input handling. It is pure presentation over ``gui_state.RunState`` — the
+and input handling. It is pure presentation over ``state.RunState`` — the
 flow/scoring logic lives there — and it never imports the terminal front-end.
 """
 
@@ -12,11 +12,11 @@ import random
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import data
-from .gui_assets import easy_banner
-from .gui_state import CONTENT_W, RunState
-from .gui_theme import CONFIG, LEVEL_CHROME, PALETTE, resolve_font
-from .player import SKIP_COST
+from .. import data
+from ..player import SKIP_COST
+from .assets import easy_banner
+from .state import CONTENT_W, RunState
+from .theme import CONFIG, LEVEL_CHROME, PALETTE, resolve_font
 
 # The run is a descent into the sphinx to uncover the secret sealed inside it.
 # Each level gets a story header (title + one-line beat) above the riddle.

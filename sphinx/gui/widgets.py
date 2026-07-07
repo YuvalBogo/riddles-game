@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import tkinter as tk
 
-from .gui_theme import PALETTE
+from .theme import PALETTE
 
 
 class Tooltip:
@@ -33,10 +33,6 @@ class Tooltip:
     def _show(self, _event=None) -> None:
         if self.tip is not None or not self.text:
             return
-        # Float just to the right of the badge, roughly aligned with its top —
-        # the menu is centred, so there's open space out to the right.
-        x = self.widget.winfo_rootx() + self.widget.winfo_width() + 10
-        y = self.widget.winfo_rooty() - 2
         self.tip = tk.Toplevel(self.widget)
         self.tip.wm_overrideredirect(True)          # no title bar / border
         self.tip.configure(bg=self.accent)          # accent shows as a 1-px frame
@@ -44,6 +40,13 @@ class Tooltip:
             self.tip, text=self.text, font=self.font, justify="left",
             bg="#111111", fg=PALETTE["fg"], wraplength=300, padx=12, pady=9,
         ).pack(padx=1, pady=1)
+        # Float just to the right of the badge and vertically centred on it, so
+        # the tip lines up with the button's height instead of hanging from its
+        # top. The menu is centred, so there's open space out to the right.
+        self.tip.update_idletasks()
+        x = self.widget.winfo_rootx() + self.widget.winfo_width() + 10
+        cy = self.widget.winfo_rooty() + self.widget.winfo_height() // 2
+        y = cy - self.tip.winfo_reqheight() // 2
         self.tip.wm_geometry(f"+{x}+{y}")
 
     def _hide(self, _event=None) -> None:

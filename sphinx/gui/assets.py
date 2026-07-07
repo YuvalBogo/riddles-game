@@ -13,7 +13,7 @@ from __future__ import annotations
 import tkinter as tk
 from pathlib import Path
 
-_IMAGE_DIR = Path(__file__).resolve().parent / "images"
+_IMAGE_DIR = Path(__file__).resolve().parent.parent / "images"
 IMAGE_FOR = {
     "menu": "sphinx_start_menu.png",     # welcome screen — the sphinx bust
     "about": "sphinx_with_friends.png",  # About screen — the four canopic jars

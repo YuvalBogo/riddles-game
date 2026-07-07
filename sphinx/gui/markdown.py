@@ -13,7 +13,7 @@ import tkinter as tk
 import webbrowser
 from pathlib import Path
 
-from .gui_theme import PALETTE
+from .theme import PALETTE
 
 # Inline spans handled below: **bold**, `code`, and [label](url) links.
 INLINE_RE = re.compile(r"(\*\*.+?\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))")
@@ -28,8 +28,8 @@ def open_url(url: str) -> None:
 
 
 def read_readme() -> str:
-    """Load the project README (one level up from this package)."""
-    path = Path(__file__).resolve().parent.parent / "README.md"
+    """Load the project README (at the repository root)."""
+    path = Path(__file__).resolve().parent.parent.parent / "README.md"
     try:
         return path.read_text(encoding="utf-8")
     except OSError:
