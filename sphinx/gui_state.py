@@ -19,8 +19,10 @@ from .player import HINT_COST, Player, SKIP_COST
 from .riddle import AsciiArtRiddle, CipherRiddle, SequenceRiddle
 
 # Inner text width (characters) for a card — the GUI renders cards as
-# monospace box-drawing blocks of this content width.
-CONTENT_W = 46
+# monospace box-drawing blocks of this content width. Wide enough that the
+# HUD progress bar (one tile per riddle, up to ~15 a level) fits on one row,
+# and so riddles wrap to fewer lines (which keeps the deck short).
+CONTENT_W = 70
 
 
 # --- Text helpers ----------------------------------------------------------

@@ -86,7 +86,7 @@ RESULT_MARK = {"correct": "✓", "wrong": "✗", "skipped": "—"}
 SLIDE_FRAMES = 6
 SLIDE_MS = 26
 BLINK_MS = 110
-CARD_ROWS = 26   # deck canvas height in text rows (fits the tallest card)
+CARD_ROWS = 22   # deck canvas height in text rows (fits the tallest card)
 
 # Pixel-art imagery (sphinx bust, canopic jars, temple facade). The source
 # files live in ``sphinx/images`` and are pre-sized to their display
@@ -119,11 +119,13 @@ def _load_image(key: str):
 
 
 # Room (px) reserved for the window manager's chrome (title bar + panels) so a
-# screen never opens taller than the visible desktop. The Easy banner shrinks
-# to whatever height is left after the rest of the game fits, and hides
-# entirely below MIN_BANNER_H rather than showing a sliver.
+# screen never opens taller than the visible desktop. The Easy banner takes
+# the room left after the rest of the game fits, but never more than
+# MAX_BANNER_H (so freeing deck height shortens the window instead of just
+# growing the banner), and hides below MIN_BANNER_H rather than show a sliver.
 SCREEN_MARGIN = 100
 MIN_BANNER_H = 70
+MAX_BANNER_H = 120
 
 # Display height (px) for the Easy banner, chosen at startup from the screen
 # size (see App._compute_layout). 0 hides it. Banners are cached per height.
@@ -173,6 +175,49 @@ def _easy_banner():
         _BANNER_CACHE[_BANNER_H] = _scaled_photo(
             _IMAGE_DIR / IMAGE_FOR["easy"], _BANNER_H)
     return _BANNER_CACHE[_BANNER_H]
+
+
+class _Tooltip:
+    """A themed hover tooltip: a small borderless ``Toplevel`` that floats
+    beside ``widget`` while the pointer is over it and vanishes on leave.
+
+    Used for the '?' help badges next to menu buttons. Styled to match the
+    game — a black card with a coloured 1-px frame and the light palette
+    text — and torn down if the widget it's attached to is destroyed (so a
+    screen change never leaves an orphan tip on screen).
+    """
+
+    def __init__(self, widget, text: str, font, accent: str | None = None):
+        self.widget = widget
+        self.text = text
+        self.font = font
+        self.accent = accent or PALETTE["cyan"]
+        self.tip: tk.Toplevel | None = None
+        widget.bind("<Enter>", self._show, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<Destroy>", self._hide, add="+")
+
+    def _show(self, _event=None) -> None:
+        if self.tip is not None or not self.text:
+            return
+        # Float just to the right of the badge, roughly aligned with its top —
+        # the menu is centred, so there's open space out to the right.
+        x = self.widget.winfo_rootx() + self.widget.winfo_width() + 10
+        y = self.widget.winfo_rooty() - 2
+        self.tip = tk.Toplevel(self.widget)
+        self.tip.wm_overrideredirect(True)          # no title bar / border
+        self.tip.configure(bg=self.accent)          # accent shows as a 1-px frame
+        tk.Label(
+            self.tip, text=self.text, font=self.font, justify="left",
+            bg="#111111", fg=PALETTE["fg"], wraplength=300, padx=12, pady=9,
+        ).pack(padx=1, pady=1)
+        self.tip.wm_geometry(f"+{x}+{y}")
+
+    def _hide(self, _event=None) -> None:
+        if self.tip is not None:
+            self.tip.destroy()
+            self.tip = None
+
 
 # Inline Markdown spans handled by the About README renderer: **bold**,
 # `code`, and [label](url) links.
@@ -847,7 +892,7 @@ class App:
         _BANNER_H = 0                                  # measure the game bannerless
         base_w, base_h = self._measure_game_size()
         nat = _load_image("easy")                      # banner at its natural size
-        nat_h = nat.height() if nat is not None else 0
+        nat_h = min(nat.height(), MAX_BANNER_H) if nat is not None else 0
 
         gap = 8                                         # matches render_banner's pady
         budget = usable_h - base_h - gap
@@ -902,25 +947,41 @@ class App:
         tk.Label(parent, text=text, font=self.title_font,
                  bg=CONFIG["background"], fg=color).pack(pady=(28, 6))
 
-    def _menu_button(self, parent, label, desc, color, cmd, key=None) -> None:
+    def _menu_button(self, parent, label, desc, color, cmd, key=None,
+                     help_text=None) -> None:
         # Each item is a centred vertical stack: the button on top, its small
         # grey description directly beneath. The shortcut digit rides just left
-        # of the button, balanced by an equal-width spacer on the right so the
+        # of the button, balanced by an equal-width slot on the right so the
         # button itself stays dead-centre (the number key still works too).
+        # When ``help_text`` is given, that right slot holds a '?' badge whose
+        # hover reveals a floating explanation.
         item = tk.Frame(parent, bg=CONFIG["background"])
         item.pack(pady=6)
 
+        # Three-column grid with equal (uniform) side columns, so the button in
+        # the middle stays dead-centre whether or not there's a '?' badge: the
+        # shortcut digit hugs its left, the badge (if any) hugs its right.
         top = tk.Frame(item, bg=CONFIG["background"])
         top.pack()
-        tk.Label(top, text=(str(key) if key is not None else ""), width=2,
+        top.grid_columnconfigure(0, uniform="side", minsize=36)
+        top.grid_columnconfigure(2, uniform="side", minsize=36)
+
+        tk.Label(top, text=(str(key) if key is not None else ""),
                  font=self.small_font, bg=CONFIG["background"],
-                 fg=PALETTE["grey"]).pack(side="left")
+                 fg=PALETTE["grey"]).grid(row=0, column=0, sticky="e", padx=(0, 4))
         tk.Button(
             top, text=label, command=cmd, font=self.font, width=16,
             bg="#111111", fg=color, activebackground="#222222",
             activeforeground=color, relief="flat", bd=0, cursor="hand2", pady=8,
-        ).pack(side="left")
-        tk.Label(top, text="", width=2, bg=CONFIG["background"]).pack(side="left")
+        ).grid(row=0, column=1)
+        if help_text:
+            badge = tk.Button(
+                top, text="?", width=2, font=self.small_font, bg="#111111",
+                fg=color, activebackground="#222222", activeforeground=color,
+                relief="flat", bd=0, cursor="hand2",
+            )
+            badge.grid(row=0, column=2, sticky="w", padx=(4, 0))
+            _Tooltip(badge, help_text, self.font, accent=color)
         if key is not None:
             self._bind_key(key, cmd)
 
@@ -963,13 +1024,21 @@ class App:
                  bg=CONFIG["background"], fg="#555555").pack(side="bottom",
                                                              pady=(0, 12))
 
-        self._menu_button(c, "Start Run", "Easy → Medium → Hard, one life pool",
-                          PALETTE["green"], self.start_run, key=1)
-        self._menu_button(c, "Practice Mode", "drill any level, no stakes",
-                          PALETTE["cyan"], self.show_practice, key=2)
-        self._menu_button(c, "View Top 5", "the leaderboard",
+        self._menu_button(
+            c, "Start Run", "Easy → Medium → Hard",
+            PALETTE["green"], self.start_run, key=1,
+            help_text=("A full run through all three levels — Easy, then Medium, "
+                       "then Hard — on one shared pool of lives. You earn XP, and "
+                       "a strong score lands on the Top 5 leaderboard."))
+        self._menu_button(
+            c, "Practice Mode", "free hints, free skips",
+            PALETTE["cyan"], self.show_practice, key=2,
+            help_text=("Drill any single level on its own, no stakes: hints and "
+                       "skips are free, no XP is scored, and it never touches the "
+                       "leaderboard. Great for warming up."))
+        self._menu_button(c, "Leaderboard", "view top 5",
                           PALETTE["yellow"], self.show_leaderboard, key=3)
-        self._menu_button(c, "About", "the project, and how to reach me",
+        self._menu_button(c, "About", "",
                           PALETTE["blue"], self.show_about, key=4)
         self._menu_button(c, "Quit", "", PALETTE["red"], self.root.destroy, key=5)
 
