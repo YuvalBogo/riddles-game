@@ -1,27 +1,33 @@
-# Riddles 2.0 🧩
+# Sphinx — riddles game project 🧩
 
-A modular, interactive terminal riddle game — a full rebuild of the very
-first program I wrote when I was just starting to learn to code.
+A modular, interactive riddle game with two front-ends — a colorful terminal
+version and a tkinter GUI — over one shared engine.
 
-No external dependencies. Pure Python 3.10+.
+> A full rebuild of the very first program I wrote when I was just starting to
+> learn to code. The original was a rough terminal riddle script; **Sphinx** is
+> the overhaul of that first project — same spirit, rebuilt properly.
+
+No external dependencies beyond the standard library. Pure Python 3.10+.
+(The GUI uses `tkinter`, which ships with most Python installs.)
 
 ## Play
 
 ```bash
-cd Riddles2.0
+cd Sphinx
 python play.py                # GUI — the default when no flag is given
 python play.py --gui          # -g: the windowed (tkinter) version
 python play.py --terminal     # -t: the terminal (text) version
 python play.py --interactive  # -i (or -c / --choose): ask which one
 ```
 
-`python -m riddles` works the same way and takes the same flags. The GUI is
-the default; the GUI needs `tkinter` (Fedora:
-`sudo dnf install python3-tkinter`).
+`python -m sphinx` works the same way and takes the same flags. The GUI is the
+default; it needs `tkinter` (Fedora: `sudo dnf install python3-tkinter`,
+Debian/Ubuntu: `sudo apt install python3-tk`). The terminal version needs
+nothing extra.
 
 ## Start menu
 
-Launching the game opens a menu:
+Launching the game opens a menu (same options in both front-ends):
 
 1. **Start Run** — a full run through all three levels.
 2. **Practice Mode** — drill any single level, no stakes.
@@ -74,18 +80,24 @@ five entries). A qualifying run is added automatically at the end.
 
 ## Architecture
 
-The project is a small package where each module has one job:
+One shared engine (riddle/player/data) with two independent front-ends over it:
+the terminal UI and the tkinter GUI. The engine never imports either front-end.
 
 ```
-Riddles2.0/
-├── play.py                    # single launcher (-t terminal / -g gui)
-└── riddles/
-    ├── __main__.py            # front-end dispatch (terminal / GUI) + menu
-    ├── game.py                # Game: real & practice loops, flow control
-    ├── riddle.py              # Riddle models (+ from_dict)
-    ├── player.py              # Player: lives, XP, streak, stats, timing
-    ├── data.py                # content + leaderboard loading, messages
-    ├── ui.py                  # colors, banners, transitions, input
+Sphinx/
+├── play.py                    # single launcher (-g gui / -t terminal / -i choose)
+├── scripts/
+│   └── bump_version.py        # manual SemVer bump helper
+└── sphinx/
+    ├── __init__.py            # __version__ — the single source of truth
+    ├── __main__.py            # front-end dispatch (terminal / GUI) + flags
+    ├── game.py                # terminal flow: real & practice loops
+    ├── ui.py                  # terminal rendering: colors, banners, input
+    ├── gui.py                 # tkinter rendering, animation, input
+    ├── gui_state.py           # tkinter game-flow state (no tkinter imports)
+    ├── riddle.py              # Riddle models (+ from_dict)  ← shared engine
+    ├── player.py              # Player: lives, XP, streak, stats  ← shared engine
+    ├── data.py                # content + leaderboard loading  ← shared engine
     └── content/
         ├── riddles.json       # all riddle content (data, not code)
         └── leaderboard.json   # Top 5 scores (created on first qualifying run)
@@ -95,10 +107,11 @@ Design notes:
 
 - **Content is data, not code.** Riddles live in `content/riddles.json`,
   so adding a riddle never means touching game logic.
-- **`Riddle` → `LogicRiddle` inheritance** carries over from the original
-  design; the logic subclass adds displayed *clues/constraints*.
+- **Shared engine, two skins.** `riddle.py` / `player.py` / `data.py` are
+  front-end-agnostic; the terminal (`ui.py` + `game.py`) and the GUI
+  (`gui.py` + `gui_state.py`) each render that engine their own way.
 - **`Player`** is the finished version of the `User` class the original
-  project trailed off on — lives, EXP and a full stats block.
+  project trailed off on — lives, XP and a full stats block.
 - **`ui`** degrades gracefully: colors switch off automatically when
   output isn't a terminal or when `NO_COLOR` is set.
 
@@ -131,19 +144,19 @@ also accepted as the answer (you can add more phrasings via `answers`).
 
 ## Versioning
 
-The game uses [Semantic Versioning](https://semver.org/) —
-`MAJOR.MINOR.PATCH`. The version is shown on the title screen and lives in
-exactly one place: `__version__` in `riddles/__init__.py`. Everything else
-reads it from there.
+Sphinx uses [Semantic Versioning](https://semver.org/) — `MAJOR.MINOR.PATCH`.
+The version is shown on the title screen and lives in exactly one place:
+`__version__` in `sphinx/__init__.py`. Everything else reads it from there.
 
-The current version is **2.0.0**, the pre-overhaul baseline (before the
-progression overhaul, XP economy, HUD, leaderboard and sphinx art).
+The **2.0.0** baseline was the pre-overhaul state (before the progression
+overhaul, XP economy, HUD, leaderboard, sphinx art and the GUI). The current
+version is **2.1.0**, the first release with the GUI and the unified launcher.
 
 Bump it manually after merging to `main`, using the script:
 
 ```bash
-python scripts/bump_version.py            # a small fix:     2.0.0 -> 2.0.1
-python scripts/bump_version.py --minor    # a new feature:   2.0.5 -> 2.1.0
+python scripts/bump_version.py            # a small fix:     2.1.0 -> 2.1.1
+python scripts/bump_version.py --minor    # a new feature:   2.1.5 -> 2.2.0
 python scripts/bump_version.py --major    # a breaking change: 2.4.2 -> 3.0.0
 ```
 
@@ -154,6 +167,6 @@ python scripts/bump_version.py --major    # a breaking change: 2.4.2 -> 3.0.0
 Optionally, tag that exact commit in git so you can jump back to it later:
 
 ```bash
-git tag v2.1.0
-git push origin v2.1.0
+git tag v2.2.0
+git push origin v2.2.0
 ```

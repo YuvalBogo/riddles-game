@@ -1,4 +1,4 @@
-"""Single entry point for Riddles 2.0.
+"""Single entry point for Sphinx.
 
 Dispatches to a front-end based on a command-line flag:
 
@@ -9,7 +9,7 @@ Dispatches to a front-end based on a command-line flag:
 
 The GUI is the default: with no flag (or with ``-g``) the GUI launches; ``-t``
 opts into the terminal version; ``-i`` / ``-c`` bring up an interactive
-chooser. Reachable as ``python -m riddles`` or ``python play.py`` (both call
+chooser. Reachable as ``python -m sphinx`` or ``python play.py`` (both call
 :func:`main`).
 """
 
@@ -135,8 +135,8 @@ def choose_frontend() -> str:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="riddles",
-        description="Riddles 2.0 — match wits with the sphinx.",
+        prog="sphinx",
+        description="Sphinx — a riddle game. Match wits with the sphinx.",
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(

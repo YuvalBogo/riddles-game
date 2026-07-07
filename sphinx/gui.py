@@ -1,4 +1,4 @@
-"""tkinter front-end for Riddles 2.0 — an alternate skin over the same engine.
+"""tkinter front-end for Sphinx — an alternate skin over the same engine.
 
 This is an experimental GUI that renders the *unmodified* engine
 (``Player`` / ``Riddle`` / ``data``) with the same clothes as the terminal
@@ -595,7 +595,7 @@ class App:
     def show_menu(self) -> None:
         self._clear()
         c = self._screen(PALETTE["magenta"])
-        self._title(c, "🧩  R I D D L E S   2 . 0  🧩", PALETTE["cyan"])
+        self._title(c, "🧩  S P H I N X  🧩", PALETTE["cyan"])
         tk.Label(c, text="match wits with the sphinx", font=self.font,
                  bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 2))
         tk.Label(c, text=f"v{__version__}", font=self.font,
@@ -651,7 +651,7 @@ class App:
         looks like the rest of the app instead of a raw system dialog."""
         bg = CONFIG["background"]
         dialog = tk.Toplevel(self.root, bg=PALETTE["magenta"])
-        dialog.title("Riddles 2.0")
+        dialog.title("Sphinx")
         dialog.resizable(False, False)
         dialog.transient(self.root)
 
@@ -703,7 +703,7 @@ class App:
 
 def main() -> None:
     root = tk.Tk()
-    root.title("Riddles 2.0")
+    root.title("Sphinx")
     root.configure(bg=CONFIG["background"])
     App(root)
     root.mainloop()

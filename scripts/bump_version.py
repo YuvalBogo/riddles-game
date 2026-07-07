@@ -20,8 +20,8 @@ import re
 import sys
 from pathlib import Path
 
-# riddles/__init__.py lives one directory up from scripts/.
-INIT_PATH = Path(__file__).resolve().parent.parent / "riddles" / "__init__.py"
+# sphinx/__init__.py lives one directory up from scripts/.
+INIT_PATH = Path(__file__).resolve().parent.parent / "sphinx" / "__init__.py"
 
 # Matches:  __version__ = "2.0.0"   (single or double quotes)
 _VERSION_RE = re.compile(

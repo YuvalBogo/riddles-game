@@ -273,7 +273,7 @@ def framed(lines: list[str], *codes: str, pad: int = 2) -> str:
 # Small, 80-col-safe art with a sphinx / vault theme.
 _INTRO_ART = [
     r"      /\_/\        ",
-    r"     ( o.o )   R I D D L E S   2 . 0",
+    r"     ( o.o )   S P H I N X",
     r"      > ^ <    Match wits with the Sphinx...",
 ]
 
