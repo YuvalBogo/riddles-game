@@ -9,8 +9,14 @@ No external dependencies. Pure Python 3.10+.
 
 ```bash
 cd Riddles2.0
-python -m riddles       # or: python play.py
+python play.py              # asks whether to play in the terminal or GUI
+python play.py --terminal   # -t: the terminal (text) version
+python play.py --gui        # -g: the windowed (tkinter) version
 ```
+
+`python -m riddles` works the same way and takes the same `-t` / `--terminal`
+and `-g` / `--gui` flags. The GUI needs `tkinter` (Fedora:
+`sudo dnf install python3-tkinter`).
 
 ## Start menu
 
@@ -71,9 +77,9 @@ The project is a small package where each module has one job:
 
 ```
 Riddles2.0/
-├── play.py                    # convenience launcher
+├── play.py                    # single launcher (-t terminal / -g gui)
 └── riddles/
-    ├── __main__.py            # start menu + mode dispatch + leaderboard
+    ├── __main__.py            # front-end dispatch (terminal / GUI) + menu
     ├── game.py                # Game: real & practice loops, flow control
     ├── riddle.py              # Riddle models (+ from_dict)
     ├── player.py              # Player: lives, XP, streak, stats, timing

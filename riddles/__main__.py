@@ -1,6 +1,18 @@
-"""Entry point: ``python -m riddles`` — the start menu and mode dispatch."""
+"""Single entry point for Riddles 2.0.
+
+Dispatches to one of two front-ends based on a command-line flag:
+
+    -t / --terminal   the text (terminal) version
+    -g / --gui        the tkinter GUI version
+
+With no flag, the user is asked interactively which one to launch. Reachable
+as ``python -m riddles`` or ``python play.py`` (both call :func:`main`).
+"""
 
 from __future__ import annotations
+
+import argparse
+import sys
 
 from . import data, ui
 from .game import Game
@@ -59,7 +71,7 @@ def practice_run() -> None:
     Game(player, data.load_riddles(), mode="practice", practice_level=level).run()
 
 
-def main() -> None:
+def run_terminal() -> None:
     ui.clear_screen()
     ui.intro_banner()
     print()
@@ -68,7 +80,7 @@ def main() -> None:
     print("  Each correct answer earns experience points (XP). Use them to get hints when you're stuck.")
     print("  Good luck!")
     print("  The Top 5 leaderboard is based on total XP earned.")
-    
+
     while True:
         choice = show_menu()
         if choice in ("4", "quit"):
@@ -80,6 +92,69 @@ def main() -> None:
             practice_run()
         elif choice == "3":
             ui.show_leaderboard(data.load_leaderboard())
+
+
+def run_gui() -> None:
+    """Launch the tkinter GUI, with a friendly message if tkinter is absent."""
+    try:
+        import tkinter  # noqa: F401
+    except ModuleNotFoundError:
+        sys.exit(
+            "tkinter is not installed — needed for the GUI version.\n"
+            "  Fedora/RHEL  : sudo dnf install python3-tkinter\n"
+            "  Debian/Ubuntu: sudo apt install python3-tk\n"
+            "Or run the terminal version instead: python play.py --terminal"
+        )
+    from .gui import main as gui_main
+    gui_main()
+
+
+def choose_frontend() -> str:
+    """Interactively ask which front-end to launch. Returns 't', 'g' or 'q'."""
+    ui.intro_banner()
+    print()
+    print("  How would you like to play?")
+    print(f"    {ui.color('t', C.BOLD)}  Terminal   the classic text version")
+    print(f"    {ui.color('g', C.BOLD)}  GUI        the windowed (tkinter) version")
+    print(f"    {ui.color('q', C.BOLD)}  Quit")
+    print()
+    while True:
+        choice = ui.ask("  Choose (t/g): ").strip().lower()
+        if choice in ("t", "terminal"):
+            return "t"
+        if choice in ("g", "gui"):
+            return "g"
+        if choice in ("q", "quit"):
+            return "q"
+        print(ui.color("  Please enter 't' for terminal or 'g' for GUI.", C.YELLOW))
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="riddles",
+        description="Riddles 2.0 — match wits with the sphinx.",
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "-t", "--terminal", action="store_true",
+        help="launch the terminal (text) version",
+    )
+    group.add_argument(
+        "-g", "--gui", action="store_true",
+        help="launch the GUI (tkinter) version",
+    )
+    args = parser.parse_args(argv)
+
+    if args.gui:
+        run_gui()
+    elif args.terminal:
+        run_terminal()
+    else:
+        choice = choose_frontend()
+        if choice == "g":
+            run_gui()
+        elif choice == "t":
+            run_terminal()
 
 
 if __name__ == "__main__":
