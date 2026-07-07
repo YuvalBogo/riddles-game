@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git merge *)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('sphinx/content/riddles.json'\\)\\); print\\({k: len\\(v\\) for k,v in d.items\\(\\)}\\)\")",
+      "Bash(PYTHONPATH=/home/yuval/Programming/Sphinx python3 __TRACKED_VAR__/shot.py game __TRACKED_VAR__/resize_game.png)",
+      "Bash(PYTHONPATH=/home/yuval/Programming/Sphinx python3 __TRACKED_VAR__/shot.py about __TRACKED_VAR__/resize_about.png)",
+      "Bash(PYTHONPATH=/home/yuval/Programming/Sphinx python3 __TRACKED_VAR__/shot_tip.py __TRACKED_VAR__/tip_full.png)",
+      "Bash(PYTHONPATH=/home/yuval/Programming/Sphinx python3 __TRACKED_VAR__/shot_tip.py __TRACKED_VAR__/tip_menu.png __TRACKED_VAR__/tip_combined.png)",
+      "Bash(PYTHONPATH=/home/yuval/Programming/Sphinx python3 __TRACKED_VAR__/shot_tip.py __TRACKED_VAR__/tip_menu2.png __TRACKED_VAR__/tip_combined2.png)",
+      "Bash(git push *)",
+      "Bash(python3 -m py_compile sphinx/gui.py sphinx/gui_theme.py sphinx/gui_assets.py sphinx/gui_widgets.py sphinx/gui_markdown.py sphinx/gui_game.py)",
+      "Bash(PYTHONPATH=/home/yuval/Programming/Sphinx python3 -c \"from sphinx.gui import main, App; from sphinx.gui_game import RiddlesGUI; print\\('imports OK; main=', main.__name__\\)\")",
+      "Bash(python3 -c \"import json; json.load\\(open\\('sphinx/content/riddles.json'\\)\\)\")",
+      "Bash(PYTHONPATH=/home/yuval/Programming/Sphinx python3 __TRACKED_VAR__/shot_refactor.py __TRACKED_VAR__/refactor_menu.png)",
+      "Bash(xargs -n1 basename)"
+    ]
+  }
+}

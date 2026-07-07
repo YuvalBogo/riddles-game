@@ -95,7 +95,7 @@
     {
       "type": "classic",
       "prompt": "What is full of holes but still holds water?",
-      "answers": ["a sponge", "sponge"],
+      "answers": ["a sponge", "sponge", "bottle", "a bottle"],
       "hint": "You use it to clean dishes.",
       "exp": 10
     },
@@ -110,7 +110,7 @@
     {
       "type": "ascii_art",
       "art": "   /\\\n  /  \\\n /____\\\n |    |\n |____|",
-      "answers": ["house", "a house"],
+      "answers": ["house", "a house", "home", "a home", "building", "a building"],
       "prompt": "What is this a picture of?",
       "hint": "People live inside it.",
       "exp": 15
@@ -120,7 +120,7 @@
     {
       "type": "classic",
       "prompt": "How many bananas can you eat on an empty stomach? (enter a number)",
-      "answers": ["1", "one"],
+      "answers": ["1", "one", "zero", "0", "none", "no bananas", "no banana"],
       "hint": "After the first one, the stomach is no longer empty.",
       "exp": 20
     },
@@ -184,14 +184,14 @@
     {
       "type": "classic",
       "prompt": "What can travel around the world while staying in a corner?",
-      "answers": ["a stamp", "stamp", "postage stamp"],
+      "answers": ["a stamp", "stamp", "postage stamp", "the stamp", "the postage stamp"],
       "hint": "You lick it and stick it on an envelope.",
       "exp": 20
     },
     {
       "type": "classic",
       "prompt": "What has many keys but can't open a single lock?",
-      "answers": ["a piano", "piano"],
+      "answers": ["a piano", "piano", "music", "a musical instrument", "musical instrument", "keyboard", "a keyboard"],
       "hint": "It makes music, not doors open.",
       "exp": 20
     },
@@ -226,7 +226,7 @@
     {
       "type": "ascii_art",
       "art": "    *\n   /|\\\n  * | *\n   \\|/\n    *",
-      "answers": ["star", "a star"],
+      "answers": ["star", "a star", "stars", "a star shape", "star shape", "diamond", "a diamond", "diamond shape", "a diamond shape"],
       "prompt": "What shape is drawn above?",
       "hint": "You see them twinkle at night.",
       "exp": 20
@@ -235,7 +235,7 @@
       "type": "classic",
       "prompt": "What question can you never honestly answer 'yes' to?",
       "answers": ["are you asleep", "are you asleep?", "asleep"],
-      "hint": "Think about what state you'd have to be in to answer it.",
+      "hint": "At what state you can't answer questions?",
       "exp": 25
     }
   ],
