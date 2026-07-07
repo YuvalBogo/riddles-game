@@ -10,6 +10,8 @@ import os
 import sys
 import time
 
+from . import __version__
+
 # --- ANSI colors -----------------------------------------------------------
 
 _COLORS_ENABLED = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
@@ -291,6 +293,8 @@ _LOSE_ART = [
 def intro_banner() -> None:
     print()
     print(framed(_INTRO_ART, C.CYAN, C.BOLD))
+    # Current game version, drawn under the title in muted grey.
+    print("  " + color(f"v{__version__}", C.GREY))
 
 
 def win_banner() -> None:
@@ -312,9 +316,9 @@ LEVEL_ACCENT = {"easy": C.CYAN, "medium": C.YELLOW, "hard": C.RED}
 # level so it always reads as "the sphinx"; only the tint shifts.
 _SPHINX_ART = [
     "+-----------------------------------+",
-    "|               /\\_/\\               |",
-    "|              ( o.o )              |",
-    "|               > ^ <               |",
+    "|           _.--\"\"\"\"\"\"--._          |",
+    "|          /   o      o   \\         |",
+    "|          \\_     ^^     _/         |",
     "|            ___________            |",
     "|           /  _______  \\           |",
     "|          /  /       \\  \\          |",

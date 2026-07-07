@@ -9,13 +9,14 @@ No external dependencies. Pure Python 3.10+.
 
 ```bash
 cd Riddles2.0
-python play.py              # asks whether to play in the terminal or GUI
-python play.py --terminal   # -t: the terminal (text) version
-python play.py --gui        # -g: the windowed (tkinter) version
+python play.py                # GUI — the default when no flag is given
+python play.py --gui          # -g: the windowed (tkinter) version
+python play.py --terminal     # -t: the terminal (text) version
+python play.py --interactive  # -i (or -c / --choose): ask which one
 ```
 
-`python -m riddles` works the same way and takes the same `-t` / `--terminal`
-and `-g` / `--gui` flags. The GUI needs `tkinter` (Fedora:
+`python -m riddles` works the same way and takes the same flags. The GUI is
+the default; the GUI needs `tkinter` (Fedora:
 `sudo dnf install python3-tkinter`).
 
 ## Start menu
@@ -127,3 +128,32 @@ Other types extend the schema minimally:
 
 For `cipher`, the `plain` text is encoded automatically for display and is
 also accepted as the answer (you can add more phrasings via `answers`).
+
+## Versioning
+
+The game uses [Semantic Versioning](https://semver.org/) —
+`MAJOR.MINOR.PATCH`. The version is shown on the title screen and lives in
+exactly one place: `__version__` in `riddles/__init__.py`. Everything else
+reads it from there.
+
+The current version is **2.0.0**, the pre-overhaul baseline (before the
+progression overhaul, XP economy, HUD, leaderboard and sphinx art).
+
+Bump it manually after merging to `main`, using the script:
+
+```bash
+python scripts/bump_version.py            # a small fix:     2.0.0 -> 2.0.1
+python scripts/bump_version.py --minor    # a new feature:   2.0.5 -> 2.1.0
+python scripts/bump_version.py --major    # a breaking change: 2.4.2 -> 3.0.0
+```
+
+- **After a small fix** merged to `main` → `python scripts/bump_version.py`.
+- **After a real new feature** merged to `main` →
+  `python scripts/bump_version.py --minor`.
+
+Optionally, tag that exact commit in git so you can jump back to it later:
+
+```bash
+git tag v2.1.0
+git push origin v2.1.0
+```

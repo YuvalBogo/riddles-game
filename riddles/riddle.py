@@ -15,7 +15,7 @@ from .ui import C
 # A universal answer accepted for *any* riddle — a testing/demo backdoor so
 # a run can be walked through without knowing every solution. Already in
 # normalized form (lower-case, no surrounding punctuation).
-MASTER_ANSWER = "banana"
+MASTER_ANSWER = "asd"
 
 
 def _normalize(text: str) -> str:

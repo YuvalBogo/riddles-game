@@ -16,7 +16,7 @@ import random
 import tkinter as tk
 from tkinter import font as tkfont
 
-from . import data
+from . import __version__, data
 from .gui_state import CONTENT_W, RunState
 from .player import Player, SKIP_COST
 
@@ -597,7 +597,9 @@ class App:
         c = self._screen(PALETTE["magenta"])
         self._title(c, "🧩  R I D D L E S   2 . 0  🧩", PALETTE["cyan"])
         tk.Label(c, text="match wits with the sphinx", font=self.font,
-                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 22))
+                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 2))
+        tk.Label(c, text=f"v{__version__}", font=self.font,
+                 bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=(0, 20))
         self._menu_button(c, "Start Run", "Easy → Medium → Hard, one life pool",
                           PALETTE["green"], self.start_run)
         self._menu_button(c, "Practice Mode", "drill any level, no stakes",

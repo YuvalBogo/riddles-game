@@ -1,12 +1,16 @@
 """Single entry point for Riddles 2.0.
 
-Dispatches to one of two front-ends based on a command-line flag:
+Dispatches to a front-end based on a command-line flag:
 
-    -t / --terminal   the text (terminal) version
-    -g / --gui        the tkinter GUI version
+    -g / --gui                 the tkinter GUI version (default)
+    -t / --terminal            the text (terminal) version
+    -i / --interactive / -c / --choose
+                               ask interactively which one to launch
 
-With no flag, the user is asked interactively which one to launch. Reachable
-as ``python -m riddles`` or ``python play.py`` (both call :func:`main`).
+The GUI is the default: with no flag (or with ``-g``) the GUI launches; ``-t``
+opts into the terminal version; ``-i`` / ``-c`` bring up an interactive
+chooser. Reachable as ``python -m riddles`` or ``python play.py`` (both call
+:func:`main`).
 """
 
 from __future__ import annotations
@@ -136,25 +140,32 @@ def main(argv: list[str] | None = None) -> None:
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
+        "-g", "--gui", action="store_true",
+        help="launch the GUI (tkinter) version (default)",
+    )
+    group.add_argument(
         "-t", "--terminal", action="store_true",
         help="launch the terminal (text) version",
     )
     group.add_argument(
-        "-g", "--gui", action="store_true",
-        help="launch the GUI (tkinter) version",
+        "-i", "--interactive", "-c", "--choose",
+        dest="interactive", action="store_true",
+        help="ask interactively whether to play in the terminal or GUI",
     )
     args = parser.parse_args(argv)
 
-    if args.gui:
-        run_gui()
-    elif args.terminal:
+    # The GUI is the default: launched by -g or by passing no flag at all.
+    # -t opts into the terminal; -i / -c bring up the interactive chooser.
+    if args.terminal:
         run_terminal()
-    else:
+    elif args.interactive:
         choice = choose_frontend()
-        if choice == "g":
-            run_gui()
-        elif choice == "t":
+        if choice == "t":
             run_terminal()
+        elif choice == "g":
+            run_gui()
+    else:
+        run_gui()
 
 
 if __name__ == "__main__":
