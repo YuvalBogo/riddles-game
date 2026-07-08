@@ -75,8 +75,11 @@ BIN_DIR="$PREFIX/bin"
 LAUNCHER="$BIN_DIR/$APP_NAME"
 DESKTOP_DIR="$PREFIX/share/applications"
 DESKTOP_FILE="$DESKTOP_DIR/$APP_NAME.desktop"
-ICON_DIR="$PREFIX/share/icons/hicolor/256x256/apps"
+ICON_DIR="$PREFIX/share/icons/hicolor/512x512/apps"
 ICON_FILE="$ICON_DIR/$APP_NAME.png"
+# Earlier versions installed a 256x256 icon. Left behind, it wins the icon-theme
+# lookup on some desktops, so uninstall sweeps it too.
+LEGACY_ICON_FILE="$PREFIX/share/icons/hicolor/256x256/apps/$APP_NAME.png"
 
 # Writing outside $HOME needs root; re-exec under sudo rather than failing
 # halfway through with a pile of permission errors.
@@ -93,7 +96,7 @@ maybe_sudo() {
 if [ "$MODE" = "uninstall" ]; then
     printf '\n%sRemoving Sphinx%s\n\n' "$BOLD" "$OFF"
     removed=0
-    for path in "$APP_DIR" "$LAUNCHER" "$DESKTOP_FILE" "$ICON_FILE"; do
+    for path in "$APP_DIR" "$LAUNCHER" "$DESKTOP_FILE" "$ICON_FILE" "$LEGACY_ICON_FILE"; do
         if [ -e "$path" ]; then
             maybe_sudo rm -rf "$path"
             info "removed $path"
@@ -256,28 +259,14 @@ if [ -f "$LEGACY_BOARD" ] && [ ! -f "$DATA_DIR/leaderboard.json" ]; then
     info "Existing scores -> $DATA_DIR/leaderboard.json"
 fi
 
-# The desktop icon. The hicolor 256x256 directory means exactly that, and the
-# artwork is 360x298 — so fit it onto a transparent 256x256 square when Pillow
-# is around to do it, and fall back to the raw file when it is not. Desktops
-# scale an odd-sized icon anyway; they just do it less tidily.
-ICON_SRC="$SRC_DIR/sphinx/images/game_logo.svg"
-tmp_icon="$(mktemp --suffix=.svg)"
-if python3 - "$ICON_SRC" "$tmp_icon" 2>/dev/null <<'PY'
-import sys
-from PIL import Image
-src, dst = sys.argv[1], sys.argv[2]
-im = Image.open(src).convert("RGBA")
-im.thumbnail((256, 256), Image.LANCZOS)
-canvas = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
-canvas.paste(im, ((256 - im.width) // 2, (256 - im.height) // 2))
-canvas.save(dst)
-PY
-then
-    maybe_sudo install -m 644 "$tmp_icon" "$ICON_FILE"
-else
-    maybe_sudo install -m 644 "$ICON_SRC" "$ICON_FILE"
-fi
-rm -f "$tmp_icon"
+# The desktop icon. game_logo.png is a 512x512 transparent render of the SVG,
+# committed alongside it. The SVG cannot be dropped in here directly: a hicolor
+# size directory holds rasters of exactly that size, and naming an SVG
+# "sphinx.png" leaves the desktop to guess. Shipping the render also means an
+# install needs no rasterizer, and the game can use the same file as its window
+# icon — Tk reads PNG and does not read SVG.
+maybe_sudo install -m 644 "$SRC_DIR/sphinx/images/game_logo.png" "$ICON_FILE"
+maybe_sudo rm -f "$LEGACY_ICON_FILE"    # an older, smaller icon would outrank it
 
 tmp_desktop="$(mktemp)"
 cat > "$tmp_desktop" <<EOF
@@ -289,6 +278,10 @@ Exec=$LAUNCHER
 Icon=$APP_NAME
 Terminal=false
 Categories=Game;LogicGame;
+# The window class Tk reports for tk.Tk(className="sphinx") — it capitalises the
+# name. Without this key a Wayland dock shows the running window under a generic
+# icon rather than this entry's.
+StartupWMClass=Sphinx
 EOF
 maybe_sudo install -m 644 "$tmp_desktop" "$DESKTOP_FILE"
 rm -f "$tmp_desktop"

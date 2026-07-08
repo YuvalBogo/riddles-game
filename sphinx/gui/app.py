@@ -18,7 +18,8 @@ from tkinter import font as tkfont
 
 from .. import __version__, data
 from ..player import Player
-from .assets import load_image, natural_banner_height, set_banner_height
+from .assets import (load_image, natural_banner_height, set_banner_height,
+                     set_window_icon)
 from .game import RiddlesGUI
 from .markdown import read_about
 from .markdown import render as render_markdown
@@ -461,9 +462,15 @@ class App:
 
 
 def main() -> None:
-    root = tk.Tk()
+    # className becomes the window's WM_CLASS — Tk capitalises it, so the class
+    # is "Sphinx", which is what sphinx.desktop declares as StartupWMClass. A
+    # Wayland compositor draws the dock icon from the .desktop entry it matches
+    # on that class, ignoring the icon a window sets on itself; X11 does the
+    # opposite. Both are set, because either session may be the one running.
+    root = tk.Tk(className="sphinx")
     root.title("Sphinx")
     root.configure(bg=CONFIG["background"])
+    set_window_icon(root)
     App(root)
     root.mainloop()
 

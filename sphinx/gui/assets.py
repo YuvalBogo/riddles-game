@@ -21,10 +21,37 @@ IMAGE_FOR = {
 }
 _IMAGE_CACHE: dict[str, "tk.PhotoImage | None"] = {}
 
+# The window/taskbar icon: the same logo the desktop entry uses, rendered to a
+# transparent PNG. Tk reads PNG and does not read SVG, so the raster is the one
+# that can serve both.
+WINDOW_ICON = "game_logo.png"
+
 # Display height (px) for the Easy banner, set by the app from the screen size.
 # 0 hides it. Banners are cached per height.
 _BANNER_H = 0
 _BANNER_CACHE: dict[int, "tk.PhotoImage | None"] = {}
+
+
+def set_window_icon(root) -> bool:
+    """Dress the window, taskbar and dock with the game logo. False if unset.
+
+    On X11 this is what the window manager draws. On Wayland the compositor
+    ignores it and matches the window's class against an installed .desktop file
+    instead — which is why ``main()`` names the class and the desktop entry
+    declares ``StartupWMClass``. Doing both covers either session.
+    """
+    path = _IMAGE_DIR / WINDOW_ICON
+    try:
+        icon = tk.PhotoImage(file=str(path))
+    except tk.TclError:
+        return False        # missing or unreadable: a plain window, not a crash
+    # Tk keeps no reference to the image, and a garbage-collected icon is blank.
+    root._sphinx_icon = icon
+    try:
+        root.iconphoto(True, icon)      # True: the default for later windows too
+    except tk.TclError:
+        return False
+    return True
 
 
 def load_image(key: str):
