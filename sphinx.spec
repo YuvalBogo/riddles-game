@@ -6,7 +6,7 @@
 #
 #     sphinx/data.py:11          content/riddles.json
 #     sphinx/gui/assets.py:16    ../images/
-#     sphinx/gui/markdown.py:32  ../../README.md
+#     sphinx/gui/markdown.py:32  ../../ABOUT.md
 #
 # Anything listed here is read-only at runtime: the unpack directory is deleted
 # when the game exits. Save data goes to sphinx.data._user_data_dir() instead.
@@ -14,7 +14,9 @@
 datas = [
     ("sphinx/content/riddles.json", "sphinx/content"),  # fatal if missing
     ("sphinx/images", "sphinx/images"),                 # banners; degrades
-    ("README.md", "."),                                 # in-game help; degrades
+    # The About screen is this file, rendered. README.md is not bundled: the
+    # game never reads it, and it documents an installer the .exe does not use.
+    ("ABOUT.md", "."),                                  # About screen; degrades
 ]
 
 a = Analysis(
