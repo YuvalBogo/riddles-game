@@ -6,6 +6,7 @@ name: Build Windows executable
 on:
   push:
     branches: [main, windows]   # the Windows work lives on its own branch
+    tags: ["v*"]                # a version tag also publishes a Release below
   workflow_dispatch:   # adds a "Run workflow" button in the Actions tab
 
 jobs:
