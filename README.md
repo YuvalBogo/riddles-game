@@ -10,7 +10,36 @@ version and a tkinter GUI — over one shared engine.
 No external dependencies beyond the standard library. Pure Python 3.10+.
 (The GUI uses `tkinter`, which ships with most Python installs.)
 
-## Play
+## Install (Linux)
+
+```bash
+./install.sh
+```
+
+Installs for the current user — no root — and then the game runs from anywhere
+by typing:
+
+```bash
+sphinx              # the windowed version
+sphinx --terminal   # the text version
+```
+
+It also appears in your desktop's application menu. The installer detects your
+distribution (Fedora, Ubuntu, Debian, Mint, Pop!_OS, RHEL, Rocky, Arch,
+Manjaro, openSUSE) and offers to install `tkinter` if it is missing; on
+anything else it says which package to install by hand and carries on.
+
+| | |
+|---|---|
+| `./install.sh --system` | install for every user, under `/usr/local` (needs sudo) |
+| `./install.sh --uninstall` | remove it again (your scores are kept) |
+| `./install.sh --detect` | print what distribution it thinks you are on |
+
+Files land in `~/.local/share/sphinx-game`, the `sphinx` command in
+`~/.local/bin`, and your leaderboard in `~/.local/share/Sphinx` — the last of
+these survives both upgrades and uninstalls.
+
+## Play from a checkout
 
 ```bash
 cd Sphinx
