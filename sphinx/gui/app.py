@@ -20,7 +20,7 @@ from .. import __version__, data
 from ..player import Player
 from .assets import load_image, natural_banner_height, set_banner_height
 from .game import RiddlesGUI
-from .markdown import read_readme
+from .markdown import read_about
 from .markdown import render as render_markdown
 from .state import RunState
 from .theme import CONFIG, LEVEL_CHROME, PALETTE, resolve_font
@@ -374,7 +374,7 @@ class App:
         )
         readme.pack(side="left", fill="both", expand=True)
         scroll.configure(command=readme.yview)
-        render_markdown(readme, read_readme(), self.md_fonts)
+        render_markdown(readme, read_about(), self.md_fonts)
         readme.configure(state="disabled")   # read-only
 
         # ↑ / ↓ scroll the README (it is read-only, so the arrows are free to
