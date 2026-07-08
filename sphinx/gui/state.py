@@ -5,7 +5,7 @@ turns a run into an ordered list of frozen ``Card`` snapshots the GUI can
 render and browse. Keeping it tkinter-free means the whole flow — scoring,
 lives, streaks, level progression, win/lose — is testable headlessly.
 
-The GUI (``gui.py``) owns rendering, animation and input; this module owns
+The GUI (``gui.game``) owns rendering, animation and input; this module owns
 "what happens next".
 """
 
@@ -14,9 +14,9 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from . import data
-from .player import HINT_COST, Player, SKIP_COST
-from .riddle import AsciiArtRiddle, CipherRiddle, SequenceRiddle
+from .. import data
+from ..player import HINT_COST, Player, SKIP_COST
+from ..riddle import AsciiArtRiddle, CipherRiddle, SequenceRiddle
 
 # Inner text width (characters) for a card — the GUI renders cards as
 # monospace box-drawing blocks of this content width. Wide enough that the

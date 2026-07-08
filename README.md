@@ -170,3 +170,8 @@ Optionally, tag that exact commit in git so you can jump back to it later:
 git tag v2.2.0
 git push origin v2.2.0
 ```
+
+## Contact
+
+Made by Yuval Bogomoletz. Find me — and the rest of my projects — on GitHub at
+[github.com/YuvalBogo](https://github.com/YuvalBogo).
