@@ -260,8 +260,8 @@ fi
 # artwork is 360x298 — so fit it onto a transparent 256x256 square when Pillow
 # is around to do it, and fall back to the raw file when it is not. Desktops
 # scale an odd-sized icon anyway; they just do it less tidily.
-ICON_SRC="$SRC_DIR/sphinx/images/outer_walls_square.png"
-tmp_icon="$(mktemp --suffix=.png)"
+ICON_SRC="$SRC_DIR/sphinx/images/game_logo.svg"
+tmp_icon="$(mktemp --suffix=.svg)"
 if python3 - "$ICON_SRC" "$tmp_icon" 2>/dev/null <<'PY'
 import sys
 from PIL import Image
