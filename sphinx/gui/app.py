@@ -209,6 +209,65 @@ class App:
             self.root.bind(seq, lambda event: cmd())
             self._key_bindings.append(seq)
 
+    def _confirm_quit(self) -> None:
+        """A themed 'leave the game?' pop-up, echoing the in-run back-to-menu
+        panel: the safe choice starts focused, ← → move between the two, Enter
+        or Space confirms, Esc cancels. Modal, so a second Esc can't stack it."""
+        bg = CONFIG["background"]
+        dialog = tk.Toplevel(self.root, bg=PALETTE["magenta"])
+        dialog.title("Sphinx")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+
+        content = tk.Frame(dialog, bg=bg)
+        content.pack(fill="both", expand=True,
+                     padx=CONFIG["border_px"], pady=CONFIG["border_px"])
+        tk.Label(content, text="Leave Sphinx?", font=self.font,
+                 bg=bg, fg=PALETTE["fg"]).pack(padx=40, pady=(24, 4))
+        tk.Label(content, text="The sphinx will still be here when you return.",
+                 font=self.small_font, bg=bg, fg=PALETTE["grey"]).pack(pady=(0, 18))
+
+        row = tk.Frame(content, bg=bg)
+        row.pack()
+
+        def choice(text, cmd, color):
+            btn = tk.Button(
+                row, text=text, command=cmd, font=self.font,
+                bg="#111111", fg=color, activebackground="#222222",
+                activeforeground=color, relief="flat", bd=0,
+                highlightthickness=2, highlightbackground=bg,
+                highlightcolor=color, padx=14, pady=6, cursor="hand2",
+            )
+            btn.pack(side="left", padx=8)
+            btn.bind("<Return>", lambda e: cmd())   # Tk gives Space for free
+            return btn
+
+        yes = choice("Yes — Exit", self.root.destroy, PALETTE["red"])
+        keep = choice("No — Stay", dialog.destroy, PALETTE["cyan"])
+
+        def focus_on(btn):
+            def handler(_event=None):
+                btn.focus_set()
+                return "break"
+            return handler
+        for btn in (yes, keep):
+            btn.bind("<Left>", focus_on(yes))
+            btn.bind("<Right>", focus_on(keep))
+        keep.focus_set()   # the safe choice starts under Return and Space
+
+        tk.Label(content, text="← → choose  ·  Enter to confirm  ·  Esc to cancel",
+                 font=self.small_font, bg=bg,
+                 fg=PALETTE["grey"]).pack(pady=(16, 22))
+        dialog.bind("<Escape>", lambda e: dialog.destroy())
+
+        # Centre the dialog over the main window, then make it modal.
+        dialog.update_idletasks()
+        px, py = self.root.winfo_rootx(), self.root.winfo_rooty()
+        pw, ph = self.root.winfo_width(), self.root.winfo_height()
+        w, h = dialog.winfo_width(), dialog.winfo_height()
+        dialog.geometry(f"+{px + (pw - w) // 2}+{py + (ph - h) // 2}")
+        dialog.grab_set()
+
     # -- screens ------------------------------------------------------------
 
     def show_menu(self) -> None:
@@ -246,7 +305,12 @@ class App:
                           PALETTE["yellow"], self.show_leaderboard, key=3)
         self._menu_button(c, "About", "",
                           PALETTE["blue"], self.show_about, key=4)
-        self._menu_button(c, "Quit", "", PALETTE["red"], self.root.destroy, key=5)
+        self._menu_button(c, "Quit", "  (or press Esc)", PALETTE["red"],
+                          self._confirm_quit, key=5)
+        # On the main menu Esc is the same as choosing Quit: it asks first,
+        # rather than dropping out of the game without warning.
+        self.root.bind("<Escape>", lambda event: self._confirm_quit())
+        self._key_bindings.append("<Escape>")
 
     def show_practice(self) -> None:
         self._clear()

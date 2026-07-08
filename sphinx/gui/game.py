@@ -233,7 +233,11 @@ class RiddlesGUI:
         if card.result != "pending":
             lines.append((row(""), border))
             mark = RESULT_MARK.get(card.result, "")
-            if card.answer:
+            if card.result == "skipped":
+                # A skipped riddle keeps its secret — no answer is revealed.
+                lines.append((row(f"The answer remains a mystery.  {mark}"),
+                              PALETTE["red"]))
+            elif card.answer:
                 lines.append((row(f"Your answer: {card.answer}  {mark}"), border))
             else:
                 lines.append((row(f"Skipped  {mark}"), border))
