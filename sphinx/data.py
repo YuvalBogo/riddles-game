@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 
 from .riddle import Riddle, from_dict
@@ -35,16 +37,46 @@ def load_riddles(path: Path | None = None) -> dict[str, list[Riddle]]:
 # --- Leaderboard (Top 5) ---------------------------------------------------
 
 LEADERBOARD_SIZE = 5
-_LEADERBOARD_FILE = _CONTENT_DIR / "leaderboard.json"
+
+
+def _user_data_dir() -> Path:
+    """The per-user directory for save data, by platform convention.
+
+    Scores cannot live beside the code. A frozen one-file build unpacks itself
+    into a temporary directory that the OS deletes on exit, and an installed
+    copy may sit somewhere read-only such as ``C:\\Program Files``. Either way
+    the package directory is the wrong place to write.
+    """
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or "~/AppData/Roaming"
+    elif sys.platform == "darwin":
+        base = "~/Library/Application Support"
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or "~/.local/share"
+    return Path(base).expanduser() / "Sphinx"
+
+
+_LEADERBOARD_FILE = _user_data_dir() / "leaderboard.json"
+
+# Where scores lived before they moved out of the package. Read-only: an older
+# board is still honored, and the next save rewrites it to the new location.
+_LEGACY_LEADERBOARD_FILE = _CONTENT_DIR / "leaderboard.json"
+
+
+def _read_board(path: Path) -> list[tuple[str, int]] | None:
+    """Parse a leaderboard file, or ``None`` if it is missing or unreadable."""
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return [(str(e["name"]), int(e["score"])) for e in raw]
+    except (OSError, json.JSONDecodeError, TypeError, KeyError, ValueError):
+        return None
 
 
 def load_leaderboard() -> list[tuple[str, int]]:
     """Return the current Top 5 as ``(name, score)`` sorted high → low."""
-    try:
-        raw = json.loads(_LEADERBOARD_FILE.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
-    entries = [(str(e["name"]), int(e["score"])) for e in raw]
+    entries = _read_board(_LEADERBOARD_FILE)
+    if entries is None:
+        entries = _read_board(_LEGACY_LEADERBOARD_FILE) or []
     entries.sort(key=lambda e: e[1], reverse=True)
     return entries[:LEADERBOARD_SIZE]
 
@@ -52,9 +84,15 @@ def load_leaderboard() -> list[tuple[str, int]]:
 def _save_leaderboard(entries: list[tuple[str, int]]) -> None:
     entries = sorted(entries, key=lambda e: e[1], reverse=True)[:LEADERBOARD_SIZE]
     payload = [{"name": name, "score": score} for name, score in entries]
-    _LEADERBOARD_FILE.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    try:
+        _LEADERBOARD_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _LEADERBOARD_FILE.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+    except OSError:
+        # A read-only or missing home directory must not end the player's run
+        # on the very screen that celebrates it — just don't persist the score.
+        pass
 
 
 def qualifies(score: int) -> bool:

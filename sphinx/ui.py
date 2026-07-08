@@ -14,7 +14,20 @@ from . import __version__
 
 # --- ANSI colors -----------------------------------------------------------
 
-_COLORS_ENABLED = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+def _isatty(stream) -> bool:
+    """Whether ``stream`` is an interactive terminal.
+
+    A windowed build (PyInstaller ``--windowed``) has no console, so the
+    standard streams are ``None``; a detached or closed stream raises instead.
+    Both mean "not a terminal" — never a crash, least of all at import time.
+    """
+    try:
+        return stream is not None and stream.isatty()
+    except ValueError:  # closed stream
+        return False
+
+
+_COLORS_ENABLED = _isatty(sys.stdout) and os.environ.get("NO_COLOR") is None
 
 
 class C:
@@ -49,7 +62,7 @@ def color(text: str, *codes: str) -> str:
 
 def clear_screen() -> None:
     """Clear the terminal, on both POSIX and Windows."""
-    if not sys.stdout.isatty():
+    if not _isatty(sys.stdout):
         return
     os.system("cls" if os.name == "nt" else "clear")
 
@@ -68,7 +81,7 @@ def banner(title: str) -> None:
 
 def _interactive() -> bool:
     """True only when both stdin and stdout are real terminals."""
-    return sys.stdout.isatty() and sys.stdin.isatty()
+    return _isatty(sys.stdout) and _isatty(sys.stdin)
 
 
 def typewriter(text: str, delay: float = 0.02, *codes: str) -> None:
