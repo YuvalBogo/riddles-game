@@ -114,7 +114,8 @@ fi
 # --- work out where we are running from -------------------------------------
 
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-for required in "$SRC_DIR/play.py" "$SRC_DIR/sphinx/__main__.py" "$SRC_DIR/sphinx/content/riddles.json"; do
+for required in "$SRC_DIR/play.py" "$SRC_DIR/sphinx/__main__.py" \
+                "$SRC_DIR/sphinx/content/riddles.json" "$SRC_DIR/ABOUT.md"; do
     [ -e "$required" ] || die "run this from the Sphinx source directory (missing ${required#$SRC_DIR/})"
 done
 
@@ -220,8 +221,9 @@ maybe_sudo rm -rf "${APP_DIR:?}/sphinx"     # drop files a previous version left
 
 maybe_sudo cp -r "$SRC_DIR/sphinx" "$APP_DIR/sphinx"
 maybe_sudo cp    "$SRC_DIR/play.py" "$APP_DIR/play.py"
-# markdown.py reads ../../README.md relative to itself, for the in-game help.
-maybe_sudo cp    "$SRC_DIR/README.md" "$APP_DIR/README.md"
+# markdown.py reads ../../ABOUT.md relative to itself: the GUI's About screen is
+# that file, rendered. It is program content, not documentation, so it ships.
+maybe_sudo cp    "$SRC_DIR/ABOUT.md" "$APP_DIR/ABOUT.md"
 # A stale leaderboard could ride along in the copy; scores live elsewhere now.
 maybe_sudo rm -f "$APP_DIR/sphinx/content/leaderboard.json"
 maybe_sudo find "$APP_DIR" -name __pycache__ -type d -prune -exec rm -rf {} +

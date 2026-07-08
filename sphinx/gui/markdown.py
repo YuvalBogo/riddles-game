@@ -1,9 +1,11 @@
 """A tiny, dependency-free Markdown renderer for the About screen.
 
-Renders the project README into a Tk ``Text`` widget using styled tags, in the
-app's palette — covering what the README actually uses: headings, fenced code
-blocks, bullets, blockquotes, rules, and inline **bold** / `code` /
-[label](url). Also owns reading the README and opening links in a browser.
+Renders ``ABOUT.md`` into a Tk ``Text`` widget using styled tags, in the app's
+palette — covering what that file uses: headings, fenced code blocks, bullets,
+blockquotes, rules, and inline **bold** / `code` / [label](url). Anything else
+is drawn verbatim, so ABOUT.md must avoid tables and images; the README is free
+to use them because the game never reads it. Also owns loading the file and
+opening links in a browser.
 """
 
 from __future__ import annotations
@@ -27,13 +29,13 @@ def open_url(url: str) -> None:
         pass
 
 
-def read_readme() -> str:
-    """Load the project README (at the repository root)."""
-    path = Path(__file__).resolve().parent.parent.parent / "README.md"
+def read_about() -> str:
+    """Load ABOUT.md, which sits beside the package rather than inside it."""
+    path = Path(__file__).resolve().parent.parent.parent / "ABOUT.md"
     try:
         return path.read_text(encoding="utf-8")
     except OSError:
-        return "README.md could not be found."
+        return "ABOUT.md could not be found."
 
 
 def render(widget: tk.Text, md: str, fonts: dict) -> None:
