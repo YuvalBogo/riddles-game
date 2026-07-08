@@ -16,10 +16,12 @@ jobs:
       - uses: actions/checkout@v4
 
       # setup-python on Windows ships tkinter, which the game needs.
+      # No `cache: pip` here — it keys the cache off a dependency file, and
+      # this project has none, so it fails the step outright. Caching two
+      # pip installs would not be worth carrying a requirements.txt for.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install build dependencies
         # Pillow is optional at runtime (assets.py falls back to Tk's
