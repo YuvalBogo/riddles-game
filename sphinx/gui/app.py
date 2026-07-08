@@ -290,17 +290,16 @@ class App:
                                                              pady=(0, 12))
 
         self._menu_button(
-            c, "Start Run", "Easy → Medium → Hard",
+            c, "Survival Run", "one life pool",
             PALETTE["green"], self.start_run, key=1,
-            help_text=("A full run through all three levels — Easy, then Medium, "
-                       "then Hard — on one shared pool of lives. You earn XP, and "
-                       "a strong score lands on the Top 5 leaderboard."))
+            help_text=("A full run:\n Easy → Medium → Hard. \n"
+                       "Earn XP to pay for hints and skips. "
+                       "Strong score lands on the Top 5 leaderboard."))
         self._menu_button(
             c, "Practice Mode", "free hints, free skips",
             PALETTE["cyan"], self.show_practice, key=2,
-            help_text=("Drill any single level on its own, no stakes: hints and "
-                       "skips are free, no XP is scored, and it never touches the "
-                       "leaderboard. Great for warming up."))
+            help_text=("Drill any single level on its own. "
+                       "No XP is scored so no leaderboard placement is possible."))
         self._menu_button(c, "Leaderboard", "view top 5",
                           PALETTE["yellow"], self.show_leaderboard, key=3)
         self._menu_button(c, "About", "",
@@ -315,7 +314,7 @@ class App:
     def show_practice(self) -> None:
         self._clear()
         c = self._screen(LEVEL_CHROME["easy"])
-        self._title(c, "Practice — pick a level", PALETTE["cyan"])
+        self._title(c, "Pick a single level to practice on", PALETTE["cyan"])
         riddles = data.load_riddles()
         for i, level in enumerate(data.LEVELS, start=1):
             self._menu_button(
