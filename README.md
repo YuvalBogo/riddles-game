@@ -178,8 +178,10 @@ The version is shown on the title screen and lives in exactly one place:
 `__version__` in `sphinx/__init__.py`. Everything else reads it from there.
 
 The **2.0.0** baseline was the pre-overhaul state (before the progression
-overhaul, XP economy, HUD, leaderboard, sphinx art and the GUI). The current
-version is **2.1.0**, the first release with the GUI and the unified launcher.
+overhaul, XP economy, HUD, leaderboard, sphinx art and the GUI). **2.1.0** was
+the first release with the GUI and the unified launcher. The current version is
+**2.7.0**, the first that installs itself — `install.sh` on Linux, and a
+packaged `Sphinx.exe` for Windows.
 
 Bump it manually after merging to `main`, using the script:
 
