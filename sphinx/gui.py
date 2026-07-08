@@ -88,6 +88,12 @@ SLIDE_MS = 26
 BLINK_MS = 110
 CARD_ROWS = 22   # deck canvas height in text rows (fits the tallest card)
 
+# The "back to menu" confirmation panel drops in from above the deck and
+# retracts the same way — a touch smoother than the card slide, since it is a
+# solid block of chrome rather than text.
+CONFIRM_FRAMES = 8
+CONFIRM_MS = 16
+
 # Pixel-art imagery (sphinx bust, canopic jars, temple facade). The source
 # files live in ``sphinx/images`` and are pre-sized to their display
 # dimensions with a solid-black background, so they load natively via Tk's
@@ -238,6 +244,8 @@ class RiddlesGUI:
         self._popup_after = None   # pending .after id for the centre banner
         self._xp_center = None     # (x, y) of the XP readout — for the -XP drop
         self._heart_centers: list = []  # (x, y) per heart — for the heart drop
+        self._confirm = None       # the "back to menu?" panel, while it's up
+        self._confirm_y = 0        # its resting y — the retract slide starts here
 
         family = _resolve_font(root)
         self.font = tkfont.Font(family=family, size=CONFIG["font_size"])
@@ -259,6 +267,8 @@ class RiddlesGUI:
         self.float_font = tkfont.Font(
             family=family, size=CONFIG["font_size"] + 2, weight="bold"
         )
+        # A quieter face for fine print — the confirmation panel's key hints.
+        self.small_font = tkfont.Font(family=family, size=CONFIG["font_size"] - 4)
         self.charw = self.font.measure("0")
         self.lineh = self.font.metrics("linespace")
         self.card_w_px = (CONTENT_W + 4) * self.charw
@@ -363,6 +373,10 @@ class RiddlesGUI:
         self.entry.bind("<Right>", self._entry_right)
         self.root.bind("<Left>", self.on_back)
         self.root.bind("<Right>", self.on_forward)
+        # Esc mirrors the ≡ Menu button, the same "go back" key every other
+        # screen answers to. It reaches here even from the entry, which has no
+        # binding of its own for it.
+        self.root.bind("<Escape>", self._to_menu)
 
     # -- geometry / drawing -------------------------------------------------
 
@@ -505,6 +519,11 @@ class RiddlesGUI:
     def _viewing_history(self) -> bool:
         return self.view_index != self.state.live_index()
 
+    def _busy(self) -> bool:
+        """True while an animation is mid-flight or the confirmation panel is
+        up — either way the deck is not the player's to touch."""
+        return self._animating or self._confirm is not None
+
     def _sync_input_state(self) -> None:
         live_pending = (
             not self.state.finished
@@ -614,7 +633,7 @@ class RiddlesGUI:
             return "break"
 
     def on_submit(self, event=None):
-        if self._animating or self._viewing_history():
+        if self._busy() or self._viewing_history():
             return
         if self.state.live_card().result != "pending":
             return
@@ -654,7 +673,7 @@ class RiddlesGUI:
                             done=(self._game_over if res["dead"] else self._unlock))
 
     def on_hint(self, event=None):
-        if self._animating or self._viewing_history():
+        if self._busy() or self._viewing_history():
             return
         res = self.state.use_hint()
         if not res["ok"]:
@@ -677,7 +696,7 @@ class RiddlesGUI:
         self._message(f"Hint revealed.{cost_note}", PALETTE["yellow"])
 
     def on_skip(self, event=None):
-        if self._animating or self._viewing_history():
+        if self._busy() or self._viewing_history():
             return
         res = self.state.skip()
         if not res["ok"]:
@@ -694,14 +713,14 @@ class RiddlesGUI:
                     done=self._after_correct)
 
     def on_back(self, event=None):
-        if self._animating or self.view_index <= 0:
+        if self._busy() or self.view_index <= 0:
             return
         self._animating = True
         self.view_index -= 1
         self._slide(self.state.cards[self.view_index], -1, done=self._unlock)
 
     def on_forward(self, event=None):
-        if self._animating or self.view_index >= self.state.live_index():
+        if self._busy() or self.view_index >= self.state.live_index():
             return
         self._animating = True
         self.view_index += 1
@@ -737,7 +756,10 @@ class RiddlesGUI:
         self._animating = False
         self.render_header()
         self._sync_input_state()
-        if not self.state.finished and not self._viewing_history():
+        # An animation that lands while the confirmation panel is up must leave
+        # the focus on the panel's buttons, not snatch it back to the entry.
+        if (not self.state.finished and not self._viewing_history()
+                and self._confirm is None):
             self.entry.focus_set()
 
     # -- animation primitives (discrete .after frames, no easing) -----------
@@ -791,9 +813,123 @@ class RiddlesGUI:
 
     # -- chrome / end -------------------------------------------------------
 
-    def _to_menu(self) -> None:
+    def _to_menu(self, event=None) -> None:
+        """The ≡ Menu button and the Esc key — one action, two ways in.
+
+        Mid-run, leaving throws the run away, so ask first. With the question
+        already on screen, Esc (or ≡ Menu again) backs out of it, keeping the
+        key a consistent "go back one step". Once the run is over there is
+        nothing left to lose, so return to the menu straight away.
+        """
+        if self._confirm is not None:
+            self._close_confirm()
+        elif self.state.finished:
+            self._leave()
+        else:
+            self._open_confirm()
+
+    def _leave(self) -> None:
         if self.on_menu:
             self.on_menu()
+
+    # -- "back to menu?" confirmation panel ---------------------------------
+
+    def _open_confirm(self) -> None:
+        """Drop a modal confirmation panel down over the deck."""
+        self._clear_popup()
+        bg, accent = CONFIG["background"], PALETTE["magenta"]
+
+        panel = tk.Frame(self.content, bg=accent)   # accent reads as a 2-px frame
+        self._confirm = panel
+        inner = tk.Frame(panel, bg=bg)
+        inner.pack(padx=2, pady=2)
+        tk.Label(inner, text="Are you sure you want to go back to menu?",
+                 font=self.font, bg=bg, fg=PALETTE["fg"]).pack(padx=30, pady=(22, 4))
+        tk.Label(inner, text="This run will be lost.", font=self.font,
+                 bg=bg, fg=PALETTE["grey"]).pack(pady=(0, 18))
+
+        row = tk.Frame(inner, bg=bg)
+        row.pack()
+
+        def choice(text, cmd, color):
+            # The highlight ring is the only cue for a keyboard player: black
+            # against the black card while the button is idle, lit in the
+            # button's own colour the moment it takes focus.
+            btn = tk.Button(
+                row, text=text, command=cmd, font=self.font,
+                bg="#111111", fg=color, activebackground="#222222",
+                activeforeground=color, relief="flat", bd=0,
+                highlightthickness=2, highlightbackground=bg,
+                highlightcolor=color, padx=14, pady=6, cursor="hand2",
+            )
+            btn.pack(side="left", padx=8)
+            btn.bind("<Return>", lambda e: cmd())   # Tk gives Space for free
+            return btn
+
+        yes = choice("Yes — Menu", self._confirm_yes, PALETTE["red"])
+        keep = choice("No — Keep going", self._close_confirm, PALETTE["cyan"])
+
+        def focus_on(btn):
+            def handler(_event=None):
+                btn.focus_set()
+                return "break"   # don't fall through to the deck's ◀ ▶ binding
+            return handler
+
+        # ← and → land on the button that sits that way on screen.
+        for btn in (yes, keep):
+            btn.bind("<Left>", focus_on(yes))
+            btn.bind("<Right>", focus_on(keep))
+        keep.focus_set()   # the safe choice starts under Return and Space
+
+        tk.Label(inner, text="← → choose  ·  Enter to confirm  ·  Esc to cancel",
+                 font=self.small_font, bg=bg,
+                 fg=PALETTE["grey"]).pack(pady=(16, 20))
+
+        # Sized before it is placed, so the slide knows where it comes to rest:
+        # centred over the deck, having fallen in from just above the content.
+        panel.update_idletasks()
+        h = panel.winfo_reqheight()
+        self._confirm_y = self.deck.winfo_y() + max(0, (self.deck_h - h) // 2)
+        panel.place(relx=0.5, y=-h, anchor="n")
+        self._slide_panel(-h, self._confirm_y)
+
+    def _confirm_yes(self) -> None:
+        self._close_confirm(done=self._leave)
+
+    def _close_confirm(self, done=None) -> None:
+        """Retract the panel upward, drop it, then run ``done``."""
+        panel = self._confirm
+        if panel is None:
+            return
+        h = panel.winfo_height() or panel.winfo_reqheight()
+
+        def finish():
+            panel.destroy()
+            self._confirm = None
+            if done:
+                done()
+                return
+            self._sync_input_state()
+            if not self.state.finished and not self._viewing_history():
+                self.entry.focus_set()
+
+        self._slide_panel(self._confirm_y, -h, done=finish)
+
+    def _slide_panel(self, y_from, y_to, done=None, i=1) -> None:
+        """Walk the panel from ``y_from`` to ``y_to`` in chunky, even steps."""
+        if not self._alive or self._confirm is None:
+            return
+        y = y_from + (y_to - y_from) * i / CONFIRM_FRAMES
+        try:
+            self._confirm.place_configure(y=int(y))
+        except tk.TclError:
+            return
+        if i >= CONFIRM_FRAMES:
+            if done:
+                done()
+            return
+        self.root.after(
+            CONFIRM_MS, lambda: self._slide_panel(y_from, y_to, done, i + 1))
 
     def teardown(self) -> None:
         """Stop pending animations so leftover .after callbacks are no-ops."""
@@ -827,10 +963,10 @@ class RiddlesGUI:
         # Record a qualifying real run on the shared leaderboard.
         if self.state.mode == "real" and data.qualifies(self.state.player.exp):
             data.add_score(self.state.player.name, self.state.player.exp)
-            self._message("New Top 5! Saved. Press ≡ Menu to return.",
+            self._message("New Top 5! Saved. Press ≡ Menu (or Esc) to return.",
                           PALETTE["green"])
         else:
-            self._message("Press ≡ Menu to return.", PALETTE["fg"])
+            self._message("Press ≡ Menu (or Esc) to return.", PALETTE["fg"])
 
 
 class App:
@@ -923,6 +1059,7 @@ class App:
             self.game = None
         self.root.unbind("<Left>")
         self.root.unbind("<Right>")
+        self.root.unbind("<Escape>")   # the running game's "back to menu" key
         # Release this screen's number-key shortcuts so they never fire while
         # a later screen (e.g. a running game) is shown.
         for seq in self._key_bindings:
@@ -997,11 +1134,14 @@ class App:
             self._key_bindings.append(seq)
 
     def _bind_back(self, cmd) -> None:
-        """Bind Backspace as a 'back' shortcut for the current sub-screen,
-        tracked so ``_clear`` releases it on exit. Safe on screens whose only
-        text widgets are read-only, so the key is never needed for editing."""
-        self.root.bind("<BackSpace>", lambda event: cmd())
-        self._key_bindings.append("<BackSpace>")
+        """Bind Esc and Backspace as 'back' shortcuts for the current
+        sub-screen, tracked so ``_clear`` releases them on exit. Esc is the
+        one key that leaves every screen, matching its ◀ Back button (and, in
+        a running game, the ≡ Menu button). Safe on screens whose only text
+        widgets are read-only, so neither key is ever needed for editing."""
+        for seq in ("<Escape>", "<BackSpace>"):
+            self.root.bind(seq, lambda event: cmd())
+            self._key_bindings.append(seq)
 
     # -- screens ------------------------------------------------------------
 
@@ -1052,7 +1192,7 @@ class App:
                 c, level.capitalize(), f"{len(riddles[level])} riddles",
                 LEVEL_CHROME[level], lambda lv=level: self.start_practice(lv), key=i,
             )
-        self._menu_button(c, "◀ Back", "  (or press Backspace)",
+        self._menu_button(c, "◀ Back", "  (or press Esc)",
                           PALETTE["grey"], self.show_menu)
         self._bind_back(self.show_menu)
 
@@ -1071,7 +1211,7 @@ class App:
                     font=self.font, bg=CONFIG["background"], fg=PALETTE["cyan"],
                 ).pack(pady=2)
         tk.Label(c, text="", bg=CONFIG["background"]).pack(pady=6)
-        self._menu_button(c, "◀ Back", "  (or press Backspace)",
+        self._menu_button(c, "◀ Back", "  (or press Esc)",
                           PALETTE["grey"], self.show_menu)
         self._bind_back(self.show_menu)
 
@@ -1126,7 +1266,7 @@ class App:
         tk.Label(c, text="© Yuval Bogomoletz — all rights reserved",
                  font=self.small_font, bg=CONFIG["background"],
                  fg=PALETTE["grey"]).pack(pady=(6, 4))
-        self._menu_button(c, "◀ Back", "  (↑ ↓ scroll · Backspace to exit)",
+        self._menu_button(c, "◀ Back", "  (↑ ↓ scroll · Esc to exit)",
                           PALETTE["grey"], self.show_menu)
         self._bind_back(self.show_menu)
 
