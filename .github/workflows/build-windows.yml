@@ -1,0 +1,72 @@
+name: Build Windows executable
+
+# Runs on a Windows machine that GitHub provides, because PyInstaller cannot
+# cross-compile: it only ever builds for the OS it is running on. Pushing from
+# Linux is fine — the build happens up here, not on your laptop.
+on:
+  push:
+    branches: [main, windows]   # the Windows work lives on its own branch
+  workflow_dispatch:   # adds a "Run workflow" button in the Actions tab
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # setup-python on Windows ships tkinter, which the game needs.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build dependencies
+        # Pillow is optional at runtime (assets.py falls back to Tk's
+        # subsample) but produces noticeably cleaner banner scaling.
+        run: pip install pyinstaller pillow
+
+      - name: Build Sphinx.exe
+        run: pyinstaller sphinx.spec --noconfirm
+
+      # Upload before smoke-testing: if opening a GUI window turns out to be
+      # unreliable on a CI runner, that should cost you a red check mark, not
+      # the executable you came here for.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sphinx-windows
+          path: dist/Sphinx.exe
+          if-no-files-found: error
+
+      - name: Smoke-test the executable
+        # A frozen build fails in ways the source never does — a data file left
+        # out of the bundle, or an import that touches a console that isn't
+        # there. Launch it, give the window a moment, confirm it is still alive.
+        shell: pwsh
+        run: |
+          $exe = "dist\Sphinx.exe"
+          if (-not (Test-Path $exe)) { throw "no executable was produced" }
+          $p = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) {
+            throw "Sphinx.exe exited early with code $($p.ExitCode)"
+          }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "Sphinx.exe launched and stayed running."
+
+  # Pushing a tag like v2.6.2 also publishes the exe as a GitHub Release, which
+  # gives you a stable link to send someone instead of a CI artifact (artifacts
+  # expire, and downloading one requires being signed in to GitHub).
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Sphinx-windows
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: Sphinx.exe

@@ -5,3 +5,7 @@ __pycache__/
 .claude/settings.local.json
 sphinx/content/leaderboard.json
 further_plans.md
+
+# PyInstaller output
+build/
+dist/
