@@ -1,37 +1,71 @@
 {
   "easy": [
     {
+      "id": "easy-01",
       "type": "classic",
       "prompt": "How many months have 28 days?",
-      "answers": ["12", "twelve", "all", "every month", "all months", "every month has 28 days", "all months have 28 days"],
+      "answers": [
+        "12",
+        "twelve",
+        "all",
+        "every month",
+        "all months",
+        "every month has 28 days",
+        "all months have 28 days"
+      ],
       "hint": "It's more than you think.",
       "exp": 10
     },
     {
+      "id": "easy-02",
       "type": "classic",
       "prompt": "I disappear the moment you say my name. What am I?",
-      "answers": ["silence", "quiet", "hush"],
+      "answers": [
+        "silence",
+        "quiet",
+        "hush"
+      ],
       "hint": "You ask for it when you want peace.",
       "exp": 10
     },
     {
+      "id": "easy-03",
       "type": "classic",
       "prompt": "A man is sitting in his car and sees three doors: a golden door, a silver door and a bronze door. Which door does he open first?",
-      "answers": ["the car door", "car door", "the door of the car", "door of the car", "the door", "door", "car"],
+      "answers": [
+        "the car door",
+        "car door",
+        "the door of the car",
+        "door of the car",
+        "the door",
+        "door",
+        "car"
+      ],
       "hint": "Imagine you are the one sitting in the car.",
       "exp": 10
     },
     {
+      "id": "easy-04",
       "type": "classic",
       "prompt": "In the Olympics, an Israeli runner overtakes the runner in second place. What place does he finish in?",
-      "answers": ["2", "two", "second"],
+      "answers": [
+        "2",
+        "two",
+        "second"
+      ],
       "hint": "Picture the race in your head step by step.",
       "exp": 10
     },
     {
+      "id": "easy-05",
       "type": "logic",
       "prompt": "Mr. and Mrs. Mustard have six daughters and each daughter has one brother. How many people are in the Mustard family?",
-      "answers": ["9", "nine", "9 people", "nine people"],
+      "answers": [
+        "9",
+        "nine",
+        "9 people",
+        "nine people"
+      ],
       "hint": "Count each person one at a time — the brother is shared.",
       "constraints": [
         "Every daughter has exactly one brother.",
@@ -40,20 +74,41 @@
       "exp": 15
     },
     {
+      "id": "easy-06",
       "type": "classic",
       "prompt": "What gets bigger the more you take away from it?",
-      "answers": ["a hole", "hole", "the hole", "a pit", "pit", "the pit"],
+      "answers": [
+        "a hole",
+        "hole",
+        "the hole",
+        "a pit",
+        "pit",
+        "the pit"
+      ],
       "hint": "It's defined by its depth.",
       "exp": 10
     },
     {
+      "id": "easy-07",
       "type": "classic",
       "prompt": "The more you walk, the more you leave behind you. What is it?",
-      "answers": ["footsteps", "footprints", "steps", "prints", "tracks", "footmarks", "marks", "trails", "traces", "imprints"],
+      "answers": [
+        "footsteps",
+        "footprints",
+        "steps",
+        "prints",
+        "tracks",
+        "footmarks",
+        "marks",
+        "trails",
+        "traces",
+        "imprints"
+      ],
       "hint": "It's something you can see on the ground.",
       "exp": 10
     },
     {
+      "id": "easy-08",
       "type": "cipher",
       "cipher_type": "caesar",
       "shift": 3,
@@ -63,54 +118,98 @@
       "exp": 15
     },
     {
+      "id": "easy-09",
       "type": "sequence",
-      "sequence": ["2", "4", "8", "16"],
-      "answers": ["32"],
+      "sequence": [
+        "2",
+        "4",
+        "8",
+        "16"
+      ],
+      "answers": [
+        "32"
+      ],
       "prompt": "What number comes next in the sequence?",
       "hint": "Each number is double the one before it.",
       "exp": 15
     },
     {
+      "id": "easy-10",
       "type": "ascii_art",
       "art": " /\\_/\\\n( o.o )\n > ^ <",
-      "answers": ["cat", "a cat", "kitten"],
+      "answers": [
+        "cat",
+        "a cat",
+        "kitten"
+      ],
       "prompt": "What animal is drawn above?",
       "hint": "It purrs and chases mice.",
       "exp": 15
     },
     {
+      "id": "easy-11",
       "type": "classic",
       "prompt": "What has to be broken before you can use it?",
-      "answers": ["an egg", "egg"],
+      "answers": [
+        "an egg",
+        "egg"
+      ],
       "hint": "You'll find it in the fridge.",
       "exp": 10
     },
     {
+      "id": "easy-12",
       "type": "classic",
       "prompt": "What has one eye but cannot see?",
-      "answers": ["a needle", "needle"],
+      "answers": [
+        "a needle",
+        "needle"
+      ],
       "hint": "Thread goes through it.",
       "exp": 10
     },
     {
+      "id": "easy-13",
       "type": "classic",
       "prompt": "What is full of holes but still holds water?",
-      "answers": ["a sponge", "sponge", "bottle", "a bottle"],
+      "answers": [
+        "a sponge",
+        "sponge",
+        "bottle",
+        "a bottle"
+      ],
       "hint": "You use it to clean dishes.",
       "exp": 10
     },
     {
+      "id": "easy-14",
       "type": "sequence",
-      "sequence": ["1", "3", "5", "7"],
-      "answers": ["9", "nine"],
+      "sequence": [
+        "1",
+        "3",
+        "5",
+        "7"
+      ],
+      "answers": [
+        "9",
+        "nine"
+      ],
       "prompt": "What number comes next in the sequence?",
       "hint": "These are all odd numbers, increasing by 2 each time.",
       "exp": 15
     },
     {
+      "id": "easy-15",
       "type": "ascii_art",
       "art": "   /\\\n  /  \\\n /____\\\n |    |\n |____|",
-      "answers": ["house", "a house", "home", "a home", "building", "a building"],
+      "answers": [
+        "house",
+        "a house",
+        "home",
+        "a home",
+        "building",
+        "a building"
+      ],
       "prompt": "What is this a picture of?",
       "hint": "People live inside it.",
       "exp": 15
@@ -118,37 +217,66 @@
   ],
   "medium": [
     {
+      "id": "medium-01",
       "type": "classic",
       "prompt": "How many bananas can you eat on an empty stomach? (enter a number)",
-      "answers": ["1", "one", "zero", "0", "none", "no bananas", "no banana"],
+      "answers": [
+        "1",
+        "one",
+        "zero",
+        "0",
+        "none",
+        "no bananas",
+        "no banana"
+      ],
       "hint": "After the first one, the stomach is no longer empty.",
       "exp": 20
     },
     {
+      "id": "medium-02",
       "type": "classic",
       "prompt": "What is always found at the end of a rainbow?",
-      "answers": ["w", "the letter w"],
+      "answers": [
+        "w",
+        "the letter w"
+      ],
       "hint": "Look carefully at the word 'rainbow' itself.",
       "exp": 20
     },
     {
+      "id": "medium-03",
       "type": "classic",
       "prompt": "It has a neck without a head, and two arms without hands. What is it?",
-      "answers": ["shirt", "a shirt"],
+      "answers": [
+        "shirt",
+        "a shirt"
+      ],
       "hint": "You might be wearing one right now.",
       "exp": 20
     },
     {
+      "id": "medium-04",
       "type": "classic",
       "prompt": "What belongs to you, but other people use it more than you do?",
-      "answers": ["my name", "your name", "name"],
+      "answers": [
+        "my name",
+        "your name",
+        "name"
+      ],
       "hint": "Other people say it far more often than you do.",
       "exp": 20
     },
     {
+      "id": "medium-05",
       "type": "logic",
       "prompt": "What has corners, yet we roll it like a ball?",
-      "answers": ["dice", "a die", "die", "cube", "a cube"],
+      "answers": [
+        "dice",
+        "a die",
+        "die",
+        "cube",
+        "a cube"
+      ],
       "hint": "It has exactly 8 corners — no more, no less.",
       "constraints": [
         "It has 8 corners.",
@@ -157,6 +285,7 @@
       "exp": 25
     },
     {
+      "id": "medium-06",
       "type": "cipher",
       "cipher_type": "atbash",
       "shift": 0,
@@ -166,39 +295,77 @@
       "exp": 25
     },
     {
+      "id": "medium-07",
       "type": "sequence",
-      "sequence": ["1", "1", "2", "3", "5", "8"],
-      "answers": ["13", "thirteen"],
+      "sequence": [
+        "1",
+        "1",
+        "2",
+        "3",
+        "5",
+        "8"
+      ],
+      "answers": [
+        "13",
+        "thirteen"
+      ],
       "prompt": "What number comes next?",
       "hint": "Each number is the sum of the two before it (Fibonacci).",
       "exp": 25
     },
     {
+      "id": "medium-08",
       "type": "ascii_art",
       "art": "   /\\\n  /  \\\n /____\\\n   ||",
-      "answers": ["tree", "a tree", "pine tree"],
+      "answers": [
+        "tree",
+        "a tree",
+        "pine tree"
+      ],
       "prompt": "What is this a picture of?",
       "hint": "It has a trunk and grows in forests.",
       "exp": 25
     },
     {
+      "id": "medium-09",
       "type": "classic",
       "prompt": "What can travel around the world while staying in a corner?",
-      "answers": ["a stamp", "stamp", "postage stamp", "the stamp", "the postage stamp"],
+      "answers": [
+        "a stamp",
+        "stamp",
+        "postage stamp",
+        "the stamp",
+        "the postage stamp"
+      ],
       "hint": "You lick it and stick it on an envelope.",
       "exp": 20
     },
     {
+      "id": "medium-10",
       "type": "classic",
       "prompt": "What has many keys but can't open a single lock?",
-      "answers": ["a piano", "piano", "music", "a musical instrument", "musical instrument", "keyboard", "a keyboard"],
+      "answers": [
+        "a piano",
+        "piano",
+        "music",
+        "a musical instrument",
+        "musical instrument",
+        "keyboard",
+        "a keyboard"
+      ],
       "hint": "It makes music, not doors open.",
       "exp": 20
     },
     {
+      "id": "medium-11",
       "type": "logic",
       "prompt": "I am taken from a mine, and shut up in a wooden case, from which I am never released, and yet I am used by almost every person. What am I?",
-      "answers": ["pencil lead", "graphite", "a pencil", "pencil"],
+      "answers": [
+        "pencil lead",
+        "graphite",
+        "a pencil",
+        "pencil"
+      ],
       "hint": "Think about what's inside a pencil.",
       "constraints": [
         "It comes from a mine.",
@@ -207,6 +374,7 @@
       "exp": 25
     },
     {
+      "id": "medium-12",
       "type": "cipher",
       "cipher_type": "caesar",
       "shift": 5,
@@ -216,41 +384,77 @@
       "exp": 25
     },
     {
+      "id": "medium-13",
       "type": "sequence",
-      "sequence": ["3", "6", "9", "12"],
-      "answers": ["15", "fifteen"],
+      "sequence": [
+        "3",
+        "6",
+        "9",
+        "12"
+      ],
+      "answers": [
+        "15",
+        "fifteen"
+      ],
       "prompt": "What number comes next in this sequence?",
       "hint": "Each number increases by the same amount.",
       "exp": 20
     },
     {
+      "id": "medium-14",
       "type": "ascii_art",
       "art": "    *\n   /|\\\n  * | *\n   \\|/\n    *",
-      "answers": ["star", "a star", "stars", "a star shape", "star shape", "diamond", "a diamond", "diamond shape", "a diamond shape"],
+      "answers": [
+        "star",
+        "a star",
+        "stars",
+        "a star shape",
+        "star shape",
+        "diamond",
+        "a diamond",
+        "diamond shape",
+        "a diamond shape"
+      ],
       "prompt": "What shape is drawn above?",
       "hint": "You see them twinkle at night.",
       "exp": 20
     },
     {
+      "id": "medium-15",
       "type": "classic",
       "prompt": "What question can you never honestly answer 'yes' to?",
-      "answers": ["are you asleep", "are you asleep?", "asleep"],
+      "answers": [
+        "are you asleep",
+        "are you asleep?",
+        "asleep"
+      ],
       "hint": "At what state you can't answer questions?",
       "exp": 25
     }
   ],
   "hard": [
     {
+      "id": "hard-01",
       "type": "classic",
       "prompt": "It has only one color but more than one size. It is never above you, and it is barely detached. What is it?",
-      "answers": ["shadow", "a shadow", "shade"],
+      "answers": [
+        "shadow",
+        "a shadow",
+        "shade"
+      ],
       "hint": "It follows you everywhere you go.",
       "exp": 30
     },
     {
+      "id": "hard-02",
       "type": "logic",
       "prompt": "Where can you find a place where 11 + 3 = 2?",
-      "answers": ["clock", "a clock", "watch", "a watch"],
+      "answers": [
+        "clock",
+        "a clock",
+        "watch",
+        "a watch"
+      ],
       "hint": "It's a very common everyday object that shows time.",
       "constraints": [
         "The numbers wrap around after reaching a limit.",
@@ -259,30 +463,50 @@
       "exp": 35
     },
     {
+      "id": "hard-03",
       "type": "classic",
       "prompt": "I make two people out of one. What am I?",
-      "answers": ["a mirror", "mirror"],
+      "answers": [
+        "a mirror",
+        "mirror"
+      ],
       "hint": "The two people are perfectly symmetric to each other.",
       "exp": 30
     },
     {
+      "id": "hard-04",
       "type": "classic",
       "prompt": "Rearrange the letters O O U S W T D N E J R to spell just one word. What word is it?",
-      "answers": ["just one word", "one word", "just one word."],
+      "answers": [
+        "just one word",
+        "one word",
+        "just one word."
+      ],
       "hint": "Do exactly what you were told — literally.",
       "exp": 35
     },
     {
+      "id": "hard-05",
       "type": "classic",
       "prompt": "What ancient invention lets you see through walls?",
-      "answers": ["window", "a window"],
+      "answers": [
+        "window",
+        "a window"
+      ],
       "hint": "There's no house without one.",
       "exp": 30
     },
     {
+      "id": "hard-06",
       "type": "logic",
       "prompt": "Three camels walk in a straight line across the desert for days.\n  The FIRST camel says: 'I see no camels ahead of me, but two behind me.'\n  The SECOND camel says: 'I see one camel ahead and one behind.'\n  The THIRD camel says: 'I see two camels ahead and one behind.'\nGiven the information, why does the third camel say that?\n  (1) It is blind.\n  (2) It is lying.\n  (3) It is confused by the heat.",
-      "answers": ["2", "two", "lying", "it is lying", "he is lying"],
+      "answers": [
+        "2",
+        "two",
+        "lying",
+        "it is lying",
+        "he is lying"
+      ],
       "hint": "There is no camel behind the third one. Read its statement again.",
       "constraints": [
         "The camels walk in a single straight line.",
@@ -291,9 +515,13 @@
       "exp": 40
     },
     {
+      "id": "hard-07",
       "type": "logic",
       "prompt": "Find the pattern:\n  1234 = 1\n  4567 = 2\n  1874 = 3\n  6429 = 3\n  4868 = ?",
-      "answers": ["6", "six"],
+      "answers": [
+        "6",
+        "six"
+      ],
       "hint": "Count something inside the digits themselves — look at the holes.",
       "constraints": [
         "Each digit is worth the number of closed loops it contains.",
@@ -302,6 +530,7 @@
       "exp": 40
     },
     {
+      "id": "hard-08",
       "type": "cipher",
       "cipher_type": "caesar",
       "shift": 7,
@@ -311,32 +540,58 @@
       "exp": 40
     },
     {
+      "id": "hard-09",
       "type": "sequence",
-      "sequence": ["O", "T", "T", "F", "F", "S", "S"],
-      "answers": ["e", "eight"],
+      "sequence": [
+        "O",
+        "T",
+        "T",
+        "F",
+        "F",
+        "S",
+        "S"
+      ],
+      "answers": [
+        "e",
+        "eight"
+      ],
       "prompt": "What letter comes next in this sequence?",
       "hint": "Say the numbers one, two, three... out loud and take their first letters.",
       "exp": 40
     },
     {
+      "id": "hard-10",
       "type": "ascii_art",
       "art": "  ______\n /      \\\n/________\\\n    ||\n    ||",
-      "answers": ["umbrella", "an umbrella", "parasol"],
+      "answers": [
+        "umbrella",
+        "an umbrella",
+        "parasol"
+      ],
       "prompt": "What object is shown above?",
       "hint": "You open it when it rains.",
       "exp": 40
     },
     {
+      "id": "hard-11",
       "type": "classic",
       "prompt": "What can fill a room but takes up no space?",
-      "answers": ["light", "a light"],
+      "answers": [
+        "light",
+        "a light"
+      ],
       "hint": "Turn off the switch and it's gone.",
       "exp": 30
     },
     {
+      "id": "hard-12",
       "type": "logic",
       "prompt": "A man looks at a portrait and says: 'Brothers and sisters I have none, but that man's father is my father's son.' Who is in the portrait?",
-      "answers": ["his son", "son", "his own son"],
+      "answers": [
+        "his son",
+        "son",
+        "his own son"
+      ],
       "hint": "'My father's son' with no siblings can only be one person.",
       "constraints": [
         "The speaker has no brothers or sisters.",
@@ -345,6 +600,7 @@
       "exp": 40
     },
     {
+      "id": "hard-13",
       "type": "cipher",
       "cipher_type": "atbash",
       "shift": 0,
@@ -354,17 +610,32 @@
       "exp": 35
     },
     {
+      "id": "hard-14",
       "type": "sequence",
-      "sequence": ["1", "4", "9", "16", "25"],
-      "answers": ["36", "thirty six", "thirty-six"],
+      "sequence": [
+        "1",
+        "4",
+        "9",
+        "16",
+        "25"
+      ],
+      "answers": [
+        "36",
+        "thirty six",
+        "thirty-six"
+      ],
       "prompt": "What number comes next in this sequence?",
       "hint": "These are perfect squares: 1², 2², 3², 4², 5² ...",
       "exp": 35
     },
     {
+      "id": "hard-15",
       "type": "ascii_art",
       "art": " .--.\n(    )\n '--'\n   ||\n  _||_\n |____|",
-      "answers": ["key", "a key"],
+      "answers": [
+        "key",
+        "a key"
+      ],
       "prompt": "What object is shown above?",
       "hint": "It unlocks doors.",
       "exp": 30

@@ -52,17 +52,24 @@ def real_run() -> None:
     if name.lower() == "quit":
         return
     player = Player(name=name)
-    Game(player, data.load_riddles(), mode="real").run()
-    _handle_leaderboard(player)
+    drawn = data.draw_run()
+    Game(player, drawn, mode="real").run()
+    _handle_leaderboard(player, drawn)
 
 
-def _handle_leaderboard(player: Player) -> None:
-    score = player.exp
-    if not data.qualifies(score):
-        print(ui.color(f"\n  Final score: {score} XP — not a Top 5 this time.", C.CYAN))
+def _handle_leaderboard(player: Player, drawn: dict) -> None:
+    # A run no longer covers the whole pool, so raw XP is not comparable across
+    # releases. Report the score against what this run could have earned.
+    pct = data.score_pct(player.exp, drawn)
+    if not data.qualifies(pct):
+        print(ui.color(
+            f"\n  Final score: {player.exp} XP — {pct}% of this run. "
+            "Not a Top 5 this time.", C.CYAN))
         return
-    print(ui.color(f"\n  🎉 {score} XP earns you a spot in the Top 5!", C.GREEN, C.BOLD))
-    board = data.add_score(player.name, score)
+    print(ui.color(
+        f"\n  🎉 {pct}% — {player.exp} XP earns you a spot in the Top 5!",
+        C.GREEN, C.BOLD))
+    board = data.add_score(player.name, pct)
     ui.show_leaderboard(board)
 
 

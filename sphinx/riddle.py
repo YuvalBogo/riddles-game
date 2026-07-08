@@ -31,6 +31,9 @@ class Riddle:
     Attributes:
         prompt: The question text shown to the player.
         answers: Every accepted answer (any one of them counts as correct).
+        rid: Stable identifier from the content file ("easy-01"). Survives
+            edits to the prompt, so a run can remember what it has already
+            shown a player. Empty for a riddle built without one.
         difficulty: "easy" | "medium" | "hard".
         hint: A single hint the player may request.
         exp: Experience points awarded for solving it.
@@ -39,6 +42,7 @@ class Riddle:
 
     prompt: str
     answers: list[str]
+    rid: str = ""
     difficulty: str = "easy"
     hint: str = "No hint available."
     exp: int = 10
@@ -186,6 +190,7 @@ def from_dict(data: dict, difficulty: str) -> Riddle:
     kind = data.get("type", "classic")
     common = dict(
         prompt=data["prompt"],
+        rid=data.get("id", ""),
         difficulty=difficulty,
         hint=data.get("hint", "No hint available."),
         exp=data.get("exp", 10),

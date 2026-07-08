@@ -334,9 +334,9 @@ class App:
             tk.Label(c, text="No scores yet — be the first!", font=self.font,
                      bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=12)
         else:
-            for rank, (name, score) in enumerate(entries, 1):
+            for rank, (name, pct) in enumerate(entries, 1):
                 tk.Label(
-                    c, text=f"{rank}.  {name[:16].ljust(16)}  {str(score).rjust(5)} XP",
+                    c, text=f"{rank}.  {name[:16].ljust(16)}  {f'{pct:.1f}'.rjust(5)} %",
                     font=self.font, bg=CONFIG["background"], fg=PALETTE["cyan"],
                 ).pack(pady=2)
         tk.Label(c, text="", bg=CONFIG["background"]).pack(pady=6)
@@ -400,7 +400,8 @@ class App:
     def start_run(self) -> None:
         name = self._ask_name() or "Player"
         self._clear()
-        state = RunState(data.load_riddles(), Player(name=name), mode="real")
+        # A real run draws a subset of the pool; Practice Mode drills all of it.
+        state = RunState(data.draw_run(), Player(name=name), mode="real")
         self.game = RiddlesGUI(self.root, state, on_menu=self.show_menu)
 
     def _ask_name(self) -> str:

@@ -23,15 +23,23 @@ _TITLES = [
 BASE_XP = 10
 
 # Skipping in a real run costs this much, drawn from the same XP pool.
-SKIP_COST = 65
+# Both costs are a fraction of what a run can earn, and a run is now 15 riddles
+# rather than the whole pool of 45. At the old price of 65 XP a hint was 2% of
+# a run's ceiling; against a 15-riddle run it would be 11%, and unaffordable
+# until the last riddle of Easy. A skip should still sting more than a hint.
+SKIP_COST = 25
 
 # Revealing a hint in a real run costs this much, from the same XP pool.
-HINT_COST = 65
+HINT_COST = 15
+
 
 # Streak bonus kicks in from the 3rd consecutive correct answer and grows
 # by +2 for each further one: 3rd → +2, 4th → +4, 5th → +6, ...
-def _streak_bonus(streak: int) -> int:
+def streak_bonus(streak: int) -> int:
     return (streak - 2) * 2 if streak >= 3 else 0
+
+
+_streak_bonus = streak_bonus   # the old private name, still used below
 
 
 @dataclass

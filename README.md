@@ -4,8 +4,7 @@ A riddle game for the terminal and the desktop. Three levels, one pool of
 lives, and a sphinx that is not especially nice about wrong answers.
 
 > A full rebuild of the very first program I wrote when I was just starting to
-> learn to code — same spirit, rebuilt properly. The longer story is in
-> [ABOUT.md](ABOUT.md).
+> learn to code.
 
 Pure Python, no dependencies beyond the standard library. Runs on Linux,
 Windows and macOS.

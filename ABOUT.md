@@ -21,15 +21,17 @@ Launching the game opens a menu (same options in both front-ends):
 - A **run always starts at Easy**; Medium unlocks after clearing Easy, Hard
   after clearing Medium — one continuous session across the three themed
   levels: **The Outer Halls** → **The Inner Vault** → **The Sphinx's Chamber**.
+- Each level draws **five riddles** from a much larger pool, and the tomb never
+  deals the same ones twice in a row. The halls are not as you left them.
 - **Lives, XP and streak carry over** across the whole run.
-- Riddles within a level appear in **random order** each time.
 - A **wrong answer costs a life** (you start with ♥♥♥; the lost heart flickers
   out). **Zero lives = the run is over** — next time you start fresh at Easy.
 - Finish a level with **zero mistakes** and you earn a life back.
 - Between levels, a short **descent effect** darkens the palette as tension
   rises (skipped when colors are off).
-- Stuck? Type `hint` — hints are limited per level (3 / 2 / 2).
-- `skip` costs **65 XP** in a run (only if you can afford it); `quit` leaves.
+- Stuck? Type `hint` — it costs **15 XP**, and hints are limited per level
+  (3 / 2 / 2).
+- `skip` costs **25 XP** in a run (only if you can afford it); `quit` leaves.
 - Riddle prompts reveal with a typewriter effect — **press any key to skip** it.
 - At the end you get a bordered **report card**: title, XP, solved, longest
   streak, mistakes, hints and time.
@@ -40,7 +42,7 @@ Launching the game opens a menu (same options in both front-ends):
 - **Streak bonus** from the 3rd correct in a row: 3rd `+2`, 4th `+4`, 5th `+6`,
   … (grows by +2 each further consecutive correct). Any wrong answer or `skip`
   resets the streak.
-- A run-mode `skip` deducts **65 XP** from your score.
+- A run-mode `skip` deducts **25 XP** from your score, a `hint` **15 XP**.
 
 ### Practice Mode
 
@@ -49,11 +51,14 @@ answer), and nothing you do counts toward the run stats, title, or leaderboard.
 
 ### Leaderboard
 
-The **Top 5** scores are kept outside the game's own folder, in your personal
-data directory — `~/.local/share/Sphinx/leaderboard.json` on Linux, and
-`%APPDATA%\Sphinx\leaderboard.json` on Windows. They survive upgrades and
-uninstalls. A qualifying run is added automatically at the end (never more than
-five entries).
+The **Top 5** is kept as a **percentage** — how much of a run's possible XP you
+actually took. A flawless run is 100%, whatever the tomb dealt you, and scores
+from runs of different lengths stay comparable.
+
+Scores live outside the game's own folder, in your personal data directory —
+`~/.local/share/Sphinx/leaderboard.json` on Linux, `%APPDATA%\Sphinx\` on
+Windows — so they survive upgrades and uninstalls. A qualifying run is added
+automatically at the end (never more than five entries).
 
 ### Riddle types
 

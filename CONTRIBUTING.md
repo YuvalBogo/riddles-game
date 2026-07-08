@@ -52,7 +52,26 @@ The **leaderboard is deliberately not in this tree.** It is written to the
 player's own data directory (`~/.local/share/Sphinx/leaderboard.json`, or
 `%APPDATA%\Sphinx\` on Windows) so that it survives reinstalls, and so that a
 copy of the game installed somewhere read-only — `/usr/local`, or the temporary
-directory a packaged `.exe` unpacks into — can still record a score.
+directory a packaged `.exe` unpacks into — can still record a score. `seen.json`
+lives beside it.
+
+### How a run is drawn
+
+`load_riddles()` returns the whole pool. Practice Mode drills it directly; a
+real run calls `draw_run()`, which takes `RIDDLES_PER_LEVEL` from each level.
+
+The ids it hands out are remembered in `seen.json`, so the next run reaches for
+riddles the last one did not use. When a level has too few unseen riddles left
+it starts over — but only back as far as the *previous* run's draw, never to a
+clean slate, or the run right after a reset could serve up the run just played.
+
+A draw also guarantees at least one non-classic riddle per level. Without it, a
+pool that is mostly plain questions occasionally deals a level of nothing but
+plain questions.
+
+Scores are a percentage of `run_max_exp()`, the XP a flawless run of that length
+could earn. Raw XP is not comparable across run lengths, because the streak
+bonus grows with each consecutive answer and so dominates a long run.
 
 ## Architecture
 
@@ -99,6 +118,7 @@ Append an object to the relevant level in `sphinx/content/riddles.json`:
 
 ```json
 {
+  "id": "easy-16",
   "type": "classic",
   "prompt": "What has to be broken before you can use it?",
   "answers": ["an egg", "egg"],
@@ -106,6 +126,16 @@ Append an object to the relevant level in `sphinx/content/riddles.json`:
   "exp": 10
 }
 ```
+
+`id` must be unique and must never change: it is how the game remembers which
+riddles a player has already been shown, so that consecutive runs draw fresh
+ones. Rewording a prompt is fine; renaming its `id` makes the riddle new again.
+
+`exp` is **not currently read by anything.** `Player.solve()` never sees the
+riddle and awards a flat `BASE_XP` for any correct answer, so a hard riddle
+pays exactly what an easy one does. The field is kept because the content
+plainly intends otherwise — wiring it up is an obvious improvement, and would
+make the difficulty curve mean something.
 
 Other types extend the schema minimally:
 
