@@ -61,18 +61,26 @@ class RiddlesGUI:
         self._alive = True         # guards pending .after callbacks on teardown
         self._heart_flash = None   # (index, glyph, color)
         self._square_flash = None  # (index, glyph, color)
-        self._popup_after = None   # pending .after id for the centre banner
-        self._xp_center = None     # (x, y) of the XP readout — for the -XP drop
+        self._popup_after = None   # pending .after id for the fading caption
+        self._caption_lbl = None   # the quiet praise/taunt line, while it fades
+        self._xp_flash = None      # transient colour for the XP counter's tick
+        self._xp_center = None     # (x, y) of the XP readout — reward flies here
         self._heart_centers: list = []  # (x, y) per heart — for the heart drop
         self._confirm = None       # the "back to menu?" panel, while it's up
         self._confirm_y = 0        # its resting y — the retract slide starts here
 
         family = resolve_font(root)
         self.font = tkfont.Font(family=family, size=CONFIG["font_size"])
-        # Bold face for the praise/taunt banner that pops low over the deck on
-        # every answer — sized modestly so it reads without dominating.
-        self.popup_font = tkfont.Font(
-            family=family, size=CONFIG["font_size"] + 5, weight="bold"
+        # Big, bold face for the "+XP" reward: it pops large in the centre,
+        # holds a beat, then flies up into the HUD counter — the run's main
+        # motivator, so it leads the eye.
+        self.reward_font = tkfont.Font(
+            family=family, size=CONFIG["font_size"] + 6, weight="bold"
+        )
+        # Bold face for the praise/taunt caption — clearly present, but a step
+        # down from the reward number so the XP still leads.
+        self.caption_font = tkfont.Font(
+            family=family, size=CONFIG["font_size"] + 2, weight="bold"
         )
         # Bold title for the per-level story header above the riddle.
         self.story_font = tkfont.Font(
@@ -311,7 +319,7 @@ class RiddlesGUI:
         # XP only matters in a real run — Practice Mode awards none.
         if self.state.mode == "real":
             segs.append(("    XP ", grey, f, None))
-            segs.append((str(p.exp), PALETTE["fg"], f, "xp"))
+            segs.append((str(p.exp), self._xp_flash or PALETTE["fg"], f, "xp"))
 
         width = self.header.winfo_width()
         if width <= 1:
@@ -365,31 +373,50 @@ class RiddlesGUI:
     def _message(self, text: str, color: str = None) -> None:
         self.msg.configure(text="  " + text, fg=color or PALETTE["fg"])
 
-    def _flash_center(self, text: str, color: str) -> None:
-        """Pop a praise/taunt banner low over the deck, briefly."""
+    def _caption(self, text: str, color: str) -> None:
+        """A quiet praise/taunt line low over the deck that holds, then fades.
+
+        The soft companion to the XP/heart motion — deliberately understated
+        (normal weight, plain colour, no frame) so the flying ``+XP`` reward
+        stays the eye's focus instead of a bold banner stealing it.
+        """
         self._clear_popup()
-        cx, cy = self.deck_w / 2, self.deck_h * 0.66
-        tid = self.deck.create_text(
-            cx, cy, text=text, fill=color, font=self.popup_font,
-            anchor="center", justify="center", tags="popup",
-        )
-        bbox = self.deck.bbox(tid)
-        if bbox:
-            pad = self.charw
-            rid = self.deck.create_rectangle(
-                bbox[0] - pad, bbox[1] - pad // 2,
-                bbox[2] + pad, bbox[3] + pad // 2,
-                fill=CONFIG["background"], outline=color, width=2,
-                tags="popup",
-            )
-            self.deck.tag_lower(rid, tid)
-        self._popup_after = self.root.after(1500, self._clear_popup)
+        x = self.deck.winfo_x() + self.deck_w / 2
+        y = self.deck.winfo_y() + self.deck_h * 0.82
+        lbl = tk.Label(self.content, text=text, font=self.caption_font,
+                       bg=CONFIG["background"], fg=color)
+        lbl.place(x=int(x), y=int(y), anchor="center")
+        self._caption_lbl = lbl
+        self._fade_caption(color, 0)
+
+    def _fade_caption(self, color: str, i: int, hold: int = 12,
+                      steps: int = 28, delay: int = 60) -> None:
+        """Hold the caption solid for ``hold`` frames, then dim it toward the
+        background over the rest — the same chunky, un-eased fade as the fly-offs."""
+        lbl = self._caption_lbl
+        if not self._alive or lbl is None:
+            return
+        if i >= steps:
+            lbl.destroy()
+            self._caption_lbl = None
+            self._popup_after = None
+            return
+        factor = 1.0 if i < hold else 1 - (i - hold) / (steps - hold)
+        try:
+            lbl.configure(fg=self._fade_hex(color, factor))
+        except tk.TclError:
+            return
+        self._popup_after = self.root.after(
+            delay, lambda: self._fade_caption(color, i + 1, hold, steps, delay))
 
     def _clear_popup(self) -> None:
         if self._popup_after is not None:
             self.root.after_cancel(self._popup_after)
             self._popup_after = None
-        self.deck.delete("popup")
+        if self._caption_lbl is not None:
+            self._caption_lbl.destroy()
+            self._caption_lbl = None
+        self.deck.delete("popup")   # legacy safety: no popup tags are drawn now
 
     # -- fly-off overlays (XP loss, lost heart) -----------------------------
 
@@ -412,32 +439,53 @@ class RiddlesGUI:
         return [(sq, "■", "#ffffff"), (sq, "■", PALETTE["yellow"]),
                 (sq, "■", PALETTE["green"])]
 
-    def _float_off(self, text, color, cx, cy, done=None,
-                   steps=16, dy=7, delay=38) -> None:
-        """Drop ``text`` down from (cx, cy) over the content, fading it out,
-        then remove it — the shared motion for the -XP and lost-heart effects.
+    def _float_off(self, text, color, cx, cy, done=None, target=None,
+                   font=None, steps=16, dy=7, delay=38, hold=0,
+                   sub=None, sub_color=None) -> None:
+        """Send ``text`` gliding over the content from (cx, cy), fading it out,
+        then remove it. With no ``target`` it drifts straight down (the -XP and
+        lost-heart effects); given a ``target`` point it flies there instead —
+        the path the +XP reward takes up into the HUD counter. ``hold`` keeps it
+        sitting solid at the start for that many frames before it sets off — the
+        beat the reward pauses, big and bright, in the centre. ``sub`` adds a
+        smaller second line riding under the main text (the streak bonus, tucked
+        under the XP number), fading with it. Motion is discrete and un-eased.
         Calls ``done`` once when finished (immediately if there's no anchor)."""
         if not self._alive or cx is None:
             if done:
                 done()
             return
-        lbl = tk.Label(self.content, text=text, font=self.float_font,
-                       bg=CONFIG["background"], fg=color)
-        lbl.place(x=int(cx), y=int(cy), anchor="center")
+        bg = CONFIG["background"]
+        box = tk.Frame(self.content, bg=bg)
+        main = tk.Label(box, text=text, font=font or self.float_font, bg=bg, fg=color)
+        main.pack()
+        sub_lbl = None
+        if sub:
+            sub_lbl = tk.Label(box, text=sub, font=self.caption_font, bg=bg,
+                               fg=sub_color or color)
+            sub_lbl.pack()
+        box.place(x=int(cx), y=int(cy), anchor="center")
+        tx, ty = target if target else (cx, cy + steps * dy)
+        move = max(1, steps - hold)   # frames spent travelling (never divide by 0)
 
         def frame(i):
             if not self._alive:
                 return
             if i >= steps:
-                lbl.destroy()
+                box.destroy()
                 if done:
                     done()
                 return
-            try:
-                lbl.place_configure(y=int(cy) + i * dy)
-                lbl.configure(fg=self._fade_hex(color, 1 - i / steps))
-            except tk.TclError:
-                return
+            if i >= hold:                       # travelling: glide up and fade
+                t = (i - hold) / move
+                try:
+                    box.place_configure(x=int(cx + (tx - cx) * t),
+                                        y=int(cy + (ty - cy) * t))
+                    main.configure(fg=self._fade_hex(color, 1 - t))
+                    if sub_lbl is not None:
+                        sub_lbl.configure(fg=self._fade_hex(sub_color or color, 1 - t))
+                except tk.TclError:
+                    return
             self.root.after(delay, lambda: frame(i + 1))
 
         frame(0)
@@ -476,16 +524,28 @@ class RiddlesGUI:
         if res["result"] == "correct":
             self.view_index = self.state.live_index()
             self._redraw_current()
-            bonus = f", +{res['bonus']} streak" if res["bonus"] else ""
-            self._flash_center(random.choice(data.PRAISE), PALETTE["green"])
-            self._message(f"+{res['base']} XP{bonus}", PALETTE["green"])
+            self.render_header()   # bank the new XP total; fixes the fly target
+            self._caption(random.choice(data.PRAISE), PALETTE["green"])
+            self._message("")
+            if self.state.mode == "real" and res["base"] > 0 and self._xp_center:
+                sx = self.deck.winfo_x() + self.deck_w / 2
+                sy = self.deck.winfo_y() + self.deck_h * 0.5
+                # Pop big in the centre, hold a beat, then fly up to the counter,
+                # the streak bonus (if any) tucked under the XP number.
+                streak = f"+{res['bonus']} streak" if res["bonus"] else None
+                self._float_off(f"+{res['base']} XP", PALETTE["green"], sx, sy,
+                                target=self._xp_center, font=self.reward_font,
+                                steps=22, hold=9, delay=36,
+                                sub=streak, sub_color=PALETTE["yellow"],
+                                done=self._flash_xp)
             self._blink(self._set_square, self._square_pop(res["square"]),
                         done=self._after_correct)
         else:
             self._redraw_current()
-            self._flash_center(random.choice(data.TAUNT), PALETTE["red"])
+            self._caption(random.choice(data.TAUNT), PALETTE["red"])
+            self._message("")
             # The lost heart empties in the HUD, then a red heart drops away and
-            # fades — more visceral than the old in-place blink.
+            # fades — more visceral than an in-place blink.
             i = res["lost_index"]
             self.render_header()
             cx, cy = self._heart_pos(i)
@@ -589,6 +649,14 @@ class RiddlesGUI:
 
     def _set_square(self, value):
         self._square_flash = value
+
+    def _set_xp_flash(self, value):
+        self._xp_flash = value
+
+    def _flash_xp(self) -> None:
+        """A quick white→green tick on the XP counter as the reward lands — the
+        payoff for the number that just flew up into it."""
+        self._blink(self._set_xp_flash, ["#ffffff", PALETTE["green"]])
 
     def _blink(self, setter, frames, done=None, i=0):
         if not self._alive:
