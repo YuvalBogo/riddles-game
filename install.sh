@@ -256,7 +256,28 @@ if [ -f "$LEGACY_BOARD" ] && [ ! -f "$DATA_DIR/leaderboard.json" ]; then
     info "Existing scores -> $DATA_DIR/leaderboard.json"
 fi
 
-maybe_sudo cp "$SRC_DIR/sphinx/images/sphinx_start_menu.png" "$ICON_FILE"
+# The desktop icon. The hicolor 256x256 directory means exactly that, and the
+# artwork is 360x298 — so fit it onto a transparent 256x256 square when Pillow
+# is around to do it, and fall back to the raw file when it is not. Desktops
+# scale an odd-sized icon anyway; they just do it less tidily.
+ICON_SRC="$SRC_DIR/sphinx/images/outer_walls_square.png"
+tmp_icon="$(mktemp --suffix=.png)"
+if python3 - "$ICON_SRC" "$tmp_icon" 2>/dev/null <<'PY'
+import sys
+from PIL import Image
+src, dst = sys.argv[1], sys.argv[2]
+im = Image.open(src).convert("RGBA")
+im.thumbnail((256, 256), Image.LANCZOS)
+canvas = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+canvas.paste(im, ((256 - im.width) // 2, (256 - im.height) // 2))
+canvas.save(dst)
+PY
+then
+    maybe_sudo install -m 644 "$tmp_icon" "$ICON_FILE"
+else
+    maybe_sudo install -m 644 "$ICON_SRC" "$ICON_FILE"
+fi
+rm -f "$tmp_icon"
 
 tmp_desktop="$(mktemp)"
 cat > "$tmp_desktop" <<EOF

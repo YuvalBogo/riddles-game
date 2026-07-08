@@ -16,7 +16,7 @@ from .. import data
 from ..player import SKIP_COST
 from .assets import easy_banner
 from .state import CONTENT_W, RunState
-from .theme import CONFIG, LEVEL_CHROME, PALETTE, resolve_font
+from .theme import CAPTION, CONFIG, LEVEL_CHROME, PALETTE, resolve_font
 
 # The run is a descent into the sphinx to uncover the secret sealed inside it.
 # Each level gets a story header (title + one-line beat) above the riddle.
@@ -377,8 +377,13 @@ class RiddlesGUI:
     def _message(self, text: str, color: str = None) -> None:
         self.msg.configure(text="  " + text, fg=color or PALETTE["fg"])
 
+    # Where the caption sits within the deck, top (0.0) to bottom (1.0). Nearer
+    # the middle than the foot of the card, so the sphinx's line lands where the
+    # eye already is — but still clear of the riddle text above it.
+    CAPTION_Y = 0.62
+
     def _caption(self, text: str, color: str) -> None:
-        """A quiet praise/taunt line low over the deck that holds, then fades.
+        """A quiet praise/taunt line over the deck that holds, then fades.
 
         The soft companion to the XP/heart motion — deliberately understated
         (normal weight, plain colour, no frame) so the flying ``+XP`` reward
@@ -386,17 +391,22 @@ class RiddlesGUI:
         """
         self._clear_popup()
         x = self.deck.winfo_x() + self.deck_w / 2
-        y = self.deck.winfo_y() + self.deck_h * 0.82
+        y = self.deck.winfo_y() + self.deck_h * self.CAPTION_Y
         lbl = tk.Label(self.content, text=text, font=self.caption_font,
                        bg=CONFIG["background"], fg=color)
         lbl.place(x=int(x), y=int(y), anchor="center")
         self._caption_lbl = lbl
         self._fade_caption(color, 0)
 
-    def _fade_caption(self, color: str, i: int, hold: int = 12,
-                      steps: int = 28, delay: int = 60) -> None:
+    def _fade_caption(self, color: str, i: int, hold: int = 24,
+                      steps: int = 44, delay: int = 60) -> None:
         """Hold the caption solid for ``hold`` frames, then dim it toward the
-        background over the rest — the same chunky, un-eased fade as the fly-offs."""
+        background over the rest — the same chunky, un-eased fade as the fly-offs.
+
+        At 60 ms a frame that is 1.4 s held and 1.2 s fading. The sphinx's lines
+        are longer than the cheers they replaced, and a line you cannot finish
+        reading before it dies is worse than no line at all.
+        """
         lbl = self._caption_lbl
         if not self._alive or lbl is None:
             return
@@ -529,7 +539,7 @@ class RiddlesGUI:
             self.view_index = self.state.live_index()
             self._redraw_current()
             self.render_header()   # bank the new XP total; fixes the fly target
-            self._caption(random.choice(data.PRAISE), PALETTE["green"])
+            self._caption(random.choice(data.PRAISE), CAPTION["praise"])
             self._message("")
             if self.state.mode == "real" and res["base"] > 0 and self._xp_center:
                 sx = self.deck.winfo_x() + self.deck_w / 2
@@ -546,7 +556,7 @@ class RiddlesGUI:
                         done=self._after_correct)
         else:
             self._redraw_current()
-            self._caption(random.choice(data.TAUNT), PALETTE["red"])
+            self._caption(random.choice(data.TAUNT), CAPTION["taunt"])
             self._message("")
             # The lost heart empties in the HUD, then a red heart drops away and
             # fades — more visceral than an in-place blink.

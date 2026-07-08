@@ -263,8 +263,7 @@ def add_score(name: str, pct: float) -> list[tuple[str, float]]:
 
 
 # The sphinx speaking. It is old, it is not in a hurry, and it has heard every
-# answer before — including yours. Keep the lines short: each one is revealed a
-# character at a time, so a long sentence is a long silence.
+# answer before — including yours. 
 PRAISE = [
     "Yes. That one was easy. They are all easy, at first.",
     "Correct. The stone remembers you now.",
@@ -278,8 +277,7 @@ PRAISE = [
     "Correct. Do not let it go to your head; there is not much room.",
     "Yes. I am almost disappointed.",
     "Well answered. I will make the next one worse.",
-    # Two the sphinx would never say — but the game says them anyway.
-    "GOD DAYUMN, you are good at this!",
+    # Something the sphinx would never say - Easter Egg
     "MACHINEEE!",
 ]
 
@@ -294,6 +292,4 @@ TAUNT = [
     "No. Breathe. The dark is patient, and so am I.",
     "You guessed. I can hear it when you guess.",
     "Wrong — and you knew it before you finished saying it.",
-    # An echo of the old voice, kept for whoever remembers it.
-    "HAHA! loser.",
 ]

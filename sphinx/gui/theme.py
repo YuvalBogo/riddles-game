@@ -51,3 +51,12 @@ PALETTE = {
 
 # Ambient chrome per level — cool → hot, intensifying with difficulty.
 LEVEL_CHROME = {"easy": "#00c2c2", "medium": "#ff9a00", "hard": "#ff2b2b"}
+
+# The sphinx's own voice, in tomb colours rather than the HUD's neon: gilded for
+# praise, oxidised copper for a wrong answer. Both are picked to hold their own
+# against the black content background — the sienna reads at about 5.6:1, the
+# same legibility the old alarm-red had, without shouting like it.
+CAPTION = {
+    "praise": "#e3b23c",   # gold leaf
+    "taunt": "#c96a4a",    # burnt sienna
+}
