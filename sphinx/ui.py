@@ -396,15 +396,17 @@ def level_descent(to_level: str) -> None:
     time.sleep(0.35)
 
 
-def show_leaderboard(entries: list[tuple[str, float]]) -> None:
+def show_leaderboard(entries: list[tuple[str, int, int]]) -> None:
     """Render the Top 5 leaderboard inside a frame."""
     lines = [color("🏆  TOP 5 RIDDLERS", C.BOLD)]
     if not entries:
         lines.append(color("No scores yet — be the first!", C.DIM))
     else:
         lines.append("")
-        for rank, (name, pct) in enumerate(entries, 1):
-            row = f"{rank}.  {name[:16].ljust(16)}  {f'{pct:.1f}'.rjust(5)} %"
+        for rank, (name, xp, max_exp) in enumerate(entries, 1):
+            is_perfect = xp == max_exp
+            perfect_badge = " (100%)" if is_perfect else ""
+            row = f"{rank}.  {name[:16].ljust(16)}  {str(xp).rjust(4)} XP{perfect_badge}"
             lines.append(row)
     print()
     print(framed(lines, C.YELLOW, pad=2))

@@ -335,9 +335,11 @@ class App:
             tk.Label(c, text="No scores yet — be the first!", font=self.font,
                      bg=CONFIG["background"], fg=PALETTE["grey"]).pack(pady=12)
         else:
-            for rank, (name, pct) in enumerate(entries, 1):
+            for rank, (name, xp, max_exp) in enumerate(entries, 1):
+                is_perfect = xp == max_exp
+                perfect_badge = " (100%)" if is_perfect else ""
                 tk.Label(
-                    c, text=f"{rank}.  {name[:16].ljust(16)}  {f'{pct:.1f}'.rjust(5)} %",
+                    c, text=f"{rank}.  {name[:16].ljust(16)}  {str(xp).rjust(4)} XP{perfect_badge}",
                     font=self.font, bg=CONFIG["background"], fg=PALETTE["cyan"],
                 ).pack(pady=2)
         tk.Label(c, text="", bg=CONFIG["background"]).pack(pady=6)

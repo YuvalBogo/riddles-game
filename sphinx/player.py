@@ -22,15 +22,22 @@ _TITLES = [
 # Base experience for any correct answer (real runs only).
 BASE_XP = 10
 
+# XP awarded per riddle, derived from difficulty level.
+LEVEL_XP = {
+    "easy": 10,
+    "medium": 15,
+    "hard": 30,
+}
+
 # Skipping in a real run costs this much, drawn from the same XP pool.
 # Both costs are a fraction of what a run can earn, and a run is now 15 riddles
 # rather than the whole pool of 45. At the old price of 65 XP a hint was 2% of
 # a run's ceiling; against a 15-riddle run it would be 11%, and unaffordable
 # until the last riddle of Easy. A skip should still sting more than a hint.
-SKIP_COST = 25
+SKIP_COST = int(BASE_XP * 4.5)
 
 # Revealing a hint in a real run costs this much, from the same XP pool.
-HINT_COST = 15
+HINT_COST = int(BASE_XP * 1.5)
 
 
 # Streak bonus kicks in from the 3rd consecutive correct answer and grows
@@ -76,7 +83,7 @@ class Player:
 
     # -- scoring ------------------------------------------------------------
 
-    def solve(self, award_xp: bool = True) -> tuple[int, int]:
+    def solve(self, difficulty: str = "easy", award_xp: bool = True) -> tuple[int, int]:
         """Record a solved riddle.
 
         Returns ``(base, bonus)`` XP awarded. With ``award_xp=False``
@@ -87,7 +94,7 @@ class Player:
         self.longest_streak = max(self.longest_streak, self.streak)
         if not award_xp:
             return (0, 0)
-        base = BASE_XP
+        base = LEVEL_XP.get(difficulty, BASE_XP)
         bonus = _streak_bonus(self.streak)
         self.exp += base + bonus
         return (base, bonus)

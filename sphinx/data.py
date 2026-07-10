@@ -109,16 +109,21 @@ def run_max_exp(drawn: dict[str, list[Riddle]]) -> int:
     """The most XP a flawless run through ``drawn`` could earn: every riddle
     solved, every streak bonus collected, nothing spent.
 
-    Solving pays a flat ``BASE_XP`` — ``Player.solve`` never sees the riddle, so
-    the ``exp`` field in the content file is not read by anything. The ceiling
-    therefore depends only on how many riddles a run holds, and the run length
-    is what a percentage makes comparable: a 15-riddle run tops out at 332 XP
-    where the old whole-pool run topped out at 2342.
+    XP per riddle is determined by its difficulty level. The ceiling depends on
+    the riddles drawn and the run length, which makes percentage scores
+    comparable across releases.
     """
-    from .player import BASE_XP, streak_bonus   # local: player imports none of this
+    from .player import LEVEL_XP, streak_bonus   # local: player imports none of this
 
-    n = sum(len(drawn.get(level, [])) for level in LEVELS)
-    return n * BASE_XP + sum(streak_bonus(i) for i in range(1, n + 1))
+    total = 0
+    streak_idx = 1
+    for level in LEVELS:
+        riddles = drawn.get(level, [])
+        xp_per_riddle = LEVEL_XP.get(level, 10)
+        for _ in riddles:
+            total += xp_per_riddle + streak_bonus(streak_idx)
+            streak_idx += 1
+    return total
 
 
 def score_pct(exp: int, drawn: dict[str, list[Riddle]]) -> float:
@@ -152,10 +157,6 @@ def _user_data_dir() -> Path:
 
 
 _LEADERBOARD_FILE = _user_data_dir() / "leaderboard.json"
-
-# Where scores lived before they moved out of the package. Read-only: an older
-# board is still honored, and the next save rewrites it to the new location.
-_LEGACY_LEADERBOARD_FILE = _CONTENT_DIR / "leaderboard.json"
 
 # Which riddles this player has already been shown, so a run can avoid them.
 # Per level: "seen" is everything drawn since the pool was last exhausted, and
@@ -199,11 +200,11 @@ def _save_seen(seen: dict[str, dict[str, set[str]]]) -> None:
 _LEGACY_MAX_EXP = 45 * 10 + sum(2 * (i - 2) for i in range(3, 46))   # 2342
 
 
-def _read_board(path: Path) -> list[tuple[str, float]] | None:
-    """Parse a leaderboard file into ``(name, percent)``.
+def _read_board(path: Path) -> list[tuple[str, int, int]] | None:
+    """Parse a leaderboard file into ``(name, xp, max_exp)``.
 
-    Entries carrying ``pct`` are current. Entries carrying ``score`` are raw XP
-    from an older release and are converted against the run they were set on.
+    Current entries have ``xp`` and ``max_exp``. Older entries with ``pct``
+    or ``score`` are skipped as they're incomparable with the new difficulty-based XP system.
     ``None`` when the file is missing or unreadable.
     """
     try:
@@ -211,28 +212,25 @@ def _read_board(path: Path) -> list[tuple[str, float]] | None:
         board = []
         for e in raw:
             name = str(e["name"])
-            if "pct" in e:
-                board.append((name, round(float(e["pct"]), 1)))
-            else:
-                pct = 100.0 * int(e["score"]) / _LEGACY_MAX_EXP
-                board.append((name, round(pct, 1)))
-        return board
+            if "xp" in e and "max_exp" in e:
+                board.append((name, int(e["xp"]), int(e["max_exp"])))
+        return board if board else None
     except (OSError, json.JSONDecodeError, TypeError, KeyError, ValueError):
         return None
 
 
-def load_leaderboard() -> list[tuple[str, float]]:
-    """Return the current Top 5 as ``(name, percent)`` sorted high → low."""
+def load_leaderboard() -> list[tuple[str, int, int]]:
+    """Return the current Top 5 as ``(name, xp, max_exp)`` sorted high → low."""
     entries = _read_board(_LEADERBOARD_FILE)
     if entries is None:
-        entries = _read_board(_LEGACY_LEADERBOARD_FILE) or []
+        entries = []
     entries.sort(key=lambda e: e[1], reverse=True)
     return entries[:LEADERBOARD_SIZE]
 
 
-def _save_leaderboard(entries: list[tuple[str, float]]) -> None:
+def _save_leaderboard(entries: list[tuple[str, int, int]]) -> None:
     entries = sorted(entries, key=lambda e: e[1], reverse=True)[:LEADERBOARD_SIZE]
-    payload = [{"name": name, "pct": pct} for name, pct in entries]
+    payload = [{"name": name, "xp": xp, "max_exp": max_exp} for name, xp, max_exp in entries]
     try:
         _LEADERBOARD_FILE.parent.mkdir(parents=True, exist_ok=True)
         _LEADERBOARD_FILE.write_text(
@@ -244,20 +242,20 @@ def _save_leaderboard(entries: list[tuple[str, float]]) -> None:
         pass
 
 
-def qualifies(pct: float) -> bool:
-    """Whether a score of ``pct`` percent earns a place in the Top 5."""
-    if pct <= 0:
+def qualifies(xp: int) -> bool:
+    """Whether a score of ``xp`` earns a place in the Top 5."""
+    if xp <= 0:
         return False
     board = load_leaderboard()
     if len(board) < LEADERBOARD_SIZE:
         return True
-    return pct > min(s for _, s in board)
+    return xp > min(s for _, s, _ in board)
 
 
-def add_score(name: str, pct: float) -> list[tuple[str, float]]:
+def add_score(name: str, xp: int, max_exp: int) -> list[tuple[str, int, int]]:
     """Insert a score, trim to Top 5, persist, and return the new board."""
     board = load_leaderboard()
-    board.append((name, round(float(pct), 1)))
+    board.append((name, xp, max_exp))
     _save_leaderboard(board)
     return load_leaderboard()
 

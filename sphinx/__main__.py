@@ -58,18 +58,19 @@ def real_run() -> None:
 
 
 def _handle_leaderboard(player: Player, drawn: dict) -> None:
-    # A run no longer covers the whole pool, so raw XP is not comparable across
-    # releases. Report the score against what this run could have earned.
-    pct = data.score_pct(player.exp, drawn)
-    if not data.qualifies(pct):
+    max_exp = data.run_max_exp(drawn)
+    if not data.qualifies(player.exp):
+        pct = data.score_pct(player.exp, drawn)
         print(ui.color(
             f"\n  Final score: {player.exp} XP — {pct}% of this run. "
             "Not a Top 5 this time.", C.CYAN))
         return
+    pct = data.score_pct(player.exp, drawn)
+    perfect = " (Perfect run!)" if player.exp == max_exp else ""
     print(ui.color(
-        f"\n  🎉 {pct}% — {player.exp} XP earns you a spot in the Top 5!",
+        f"\n  🎉 {player.exp} XP ({pct}% of this run) earns you a spot in the Top 5!{perfect}",
         C.GREEN, C.BOLD))
-    board = data.add_score(player.name, pct)
+    board = data.add_score(player.name, player.exp, max_exp)
     ui.show_leaderboard(board)
 
 

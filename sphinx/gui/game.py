@@ -862,12 +862,13 @@ class RiddlesGUI:
         rows.append(("╚" + "═" * (w + 2) + "╝", color))
         self._card_items = self._draw_card(rows, self._card_x(), self.lineh)
 
-        # Record a qualifying real run on the shared leaderboard, as a
-        # percentage of what a flawless run of this length could have earned.
-        pct = data.score_pct(self.state.player.exp, self.state.riddles)
-        if self.state.mode == "real" and data.qualifies(pct):
-            data.add_score(self.state.player.name, pct)
-            self._message(f"New Top 5 — {pct}%! Saved. "
+        # Record a qualifying real run on the shared leaderboard.
+        max_exp = data.run_max_exp(self.state.riddles)
+        if self.state.mode == "real" and data.qualifies(self.state.player.exp):
+            data.add_score(self.state.player.name, self.state.player.exp, max_exp)
+            pct = data.score_pct(self.state.player.exp, self.state.riddles)
+            perfect = " (Perfect!)" if self.state.player.exp == max_exp else ""
+            self._message(f"New Top 5 — {self.state.player.exp} XP ({pct}%){perfect}! Saved. "
                           "Press ≡ Menu (or Esc) to return.", PALETTE["green"])
         else:
             self._message("Press ≡ Menu (or Esc) to return.", PALETTE["fg"])

@@ -172,7 +172,7 @@ class Game:
             ui.animate_life_loss(self.player.lives, self.player.max_lives)
 
     def _reward_correct(self, riddle: Riddle) -> None:
-        base, bonus = self.player.solve(award_xp=(self.mode == "real"))
+        base, bonus = self.player.solve(difficulty=riddle.difficulty, award_xp=(self.mode == "real"))
         print()
         line = ui.color(f"  {random.choice(data.PRAISE)}", C.GREEN, C.BOLD)
         if self.mode == "real":
